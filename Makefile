@@ -1,21 +1,18 @@
 CFLAGS= -Wall -ggdb3 -Wextra -std=c99 #debug
 #CFLAGS= -O3 #for release
 LIBS= -lm
-NAME=filter
-NAME2=tblcompile
+NAME=tblcompile
 CC=gcc
-SRCS1=filter.c
-SRCS2=tblcompile.c	
+SRCS1=tblcompile.c	
 SPLINTARGS= +posixstrictlib -retvalint
 HDRS= $(SRCS:.c=.h)
 OBJS= $(SRCS:.c=.o)
 
-all: filter tblcompile
+all: tblcompile
 
 tblcompile: tblcompile.c tblcompile.h
 	$(CC) $(CFLAGS) $(LIBS) -o $@ tblcompile.c
-filter: filter.c filter.h
-	$(CC) $(CFLAGS) $(LIBS) -o $@ filter.c
+
 
 #utility targets
 clean:
