@@ -1,5 +1,7 @@
 *.o
 filter
+tblcompile
 .emacs*
 *.tbl
 old_code/*
+*.gch

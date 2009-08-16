@@ -1,25 +1,27 @@
-CFLAGS= -Wall -O -g -Wextra -lrt -lpthread -std=c99
+CFLAGS= -Wall -ggdb3 -Wextra -std=c99 #debug
+#CFLAGS= -O3 #for release
+LIBS= -lm
 NAME=filter
+NAME2=tblcompile
 CC=gcc
-SRCS=filter.c
+SRCS1=filter.c
+SRCS2=tblcompile.c	
 SPLINTARGS= +posixstrictlib -retvalint
 HDRS= $(SRCS:.c=.h)
 OBJS= $(SRCS:.c=.o)
 
-all: $(NAME)
+all: filter tblcompile
 
-$(NAME): $(OBJS)
-	$(CC) $(CFLAGS) -o $@ $(OBJS)
-%.o: %.c %.h
-	$(CC) $(CFLAGS) -c $*.c
+tblcompile: tblcompile.c tblcompile.h
+	$(CC) $(CFLAGS) $(LIBS) -o $@ tblcompile.c
+filter: filter.c filter.h
+	$(CC) $(CFLAGS) $(LIBS) -o $@ filter.c
 
 #utility targets
 clean:
 	@-rm *~ *.o $(NAME) 2> /dev/null
 lint: all
 	@-splint $(SPLINTARGS) $(SRCS) $(HDRS)
-memcheck: all
-	@-valgrind ./$(NAME) fake.tbl
 
 #hack to get flymake mode to work with emacs 22
 .FLYMAKE-HACK: check-syntax
