@@ -1,4 +1,4 @@
-CFLAGS= -Wall -ggdb3 -Wextra -std=c99 #debug
+CFLAGS= -Wall -ggdb3 -Wextra -std=gnu99 #debug
 #CFLAGS= -O3 #for release
 LIBS= -lm
 NAME=tblcompile

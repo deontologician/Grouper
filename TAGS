@@ -1,0 +1,39 @@
+
+tblcompile.c,372
+int main(3,25
+uint64_t min_tables(84,3297
+policy read_policy(113,4653
+void parse_q_masks(180,7147
+void parse_b_masks(192,7665
+void printbits(206,8371
+uint8_t ** array2d_alloc(213,8571
+void array2d_free(224,8938
+void fill_tables(231,9064
+bool rule_matches(302,13365
+void copy_section(313,13769
+uint8_t ** create_single_table(324,14212
+void print_mem(329,14400
+
+tblcompile.h,623
+#define TABLE_ERROR 14,247
+#define SUCCESS 15,332
+#define FAILURE 16,351
+        uint64_t pl;19,388
+        uint64_t n;20,436
+        uint64_t N;21,486
+        uint64_t b;22,565
+        uint64_t B;23,634
+        uint8_t ** q_masks;25,766
+        uint8_t ** b_masks;26,839
+} policy;27,914
+#define POLICY_INIT 28,924
+        uint64_t even_h;33,1139
+        uint64_t odd_h;34,1199
+        uint64_t even_d;35,1258
+        uint64_t odd_d;36,1317
+        uint64_t width;37,1375
+        uint64_t even_s;38,1434
+        uint64_t odd_s;39,1494
+} table_dims;40,1553
+#define lg(89,3278
+#define ones_mask(92,3363
