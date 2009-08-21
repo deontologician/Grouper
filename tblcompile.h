@@ -34,7 +34,7 @@ typedef struct {
         uint64_t odd_h;         /* Height of odd tables */
         uint64_t even_d;        /* Depth of even tables */
         uint64_t odd_d;         /* Depth of odd tables */
-        uint64_t width;         /* Width of all tables  */
+        uint64_t bitwidth;         /* Width of all tables  */
         uint64_t even_s;        /* Width of even section */
         uint64_t odd_s;         /* Width of odd section */
 } table_dims;
@@ -81,7 +81,9 @@ void copy_section(const uint8_t*, uint8_t*, uint64_t, uint64_t);
 uint8_t ** create_single_table(policy);
 
 /* Prints a contiguous area of memory in binary starting with ptr and of the given size */
-void print_mem(uint8_t *,  uint64_t );
+void print_mem(uint8_t *,  uint64_t , uint64_t);
+
+void print_tables(uint64_t, uint64_t, uint64_t, uint8_t[*][*][*]);
 
 /************************** Inline functions  *************************/
 

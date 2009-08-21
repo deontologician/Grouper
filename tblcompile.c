@@ -1,11 +1,12 @@
 #include "tblcompile.h"
+#define DEBUG 0
 
 int main(int argc, char* argv[])
 {
-
         /* Check for the proper number of arguments. Print usage if wrong number */
-        if (argc != 3){
-                fprintf(stderr, "Usage: %s <max memory> <policy file.pol>\n", argv[0] );
+        if (argc < 3){
+                fprintf(stderr, 
+                        "Usage: %s <max memory> <policy file.pol> [<input file>] [<output file]\n", argv[0] );
                 exit(EXIT_FAILURE);
         }
         /* Parse the number of memory bits available */
@@ -13,10 +14,32 @@ int main(int argc, char* argv[])
   
         /* open the policy file*/
         FILE *pol_file = fopen(argv[2], "r");
-
+        /* Exit if file fails to open */
         if (pol_file == NULL){
                 fprintf(stderr, "Invalid policy file: \'%s\' \n", argv[2]);
                 exit(EXIT_FAILURE);
+        }
+
+        /* Check for input file & ensure it can be opened. */
+        if(argc >= 4){
+                FILE * in_temp = stdin;
+                stdin = fopen(argv[3], "r");
+                if(stdin == NULL){
+                        fprintf(stderr,"Input file '%s' is invalid or non-existent. "
+                                "Falling back to stdin.\n", argv[3]);
+                        stdin = in_temp;
+                }
+        }
+
+        /* Check for output file & ensure it can be opened. */
+        if(argc >= 5){
+                FILE * out_temp = stdout;               
+                stdout = fopen(argv[4], "w");
+                if(stdout == NULL){
+                        fprintf(stderr,"Output file '%s' cannot be opened for writing."
+                                " Falling back to stdout.\n", argv[4]);
+                        stdout = out_temp;
+                }
         }
 
         policy pol = read_policy(pol_file);
@@ -24,14 +47,19 @@ int main(int argc, char* argv[])
 
         /* Calculate number of tables required.  */
         uint64_t t = min_tables(memsize_bits, pol.N , pol.b);
+
         if (t == 0){
                 fprintf(stderr,"Error: not enough memory to build tables. "
                         "Needs at least %"PRIu64" bytes.\n",
                         (2*pol.N*pol.b)/8);
                 exit(EXIT_FAILURE);
         }
+
+#if DEBUG
         fprintf(stderr, "%"PRIu64" tables needed for memory size of %"PRIu64" bits.\n",
                t, memsize_bits);
+#endif
+
         if (t == 1){    
                 uint8_t ** single_table = create_single_table(pol);
         }else{
@@ -43,35 +71,40 @@ int main(int argc, char* argv[])
                         .odd_h   = (uint64_t) exp2(pol.b/t + 1),
                         .even_d  = t - pol.b % t,
                         .odd_d   = pol.b % t,
-                        .width   = pol.N
+                        .bitwidth   = pol.N
                 };
 
-                printf ("\n\nCreating %lu tables %lu of which will be %lux%lu,\n"
-                        "and %lu of which will be %lux%lu.\n\n", t, d.even_d, d.width,
-                        d.even_h, d.odd_d, d.width, d.odd_h);
-                printf("Q_MASKS, location: %llx size: %lu \n", pol.q_masks[0], pol.n*pol.B/8);/* DEBUG */
-                print_mem(pol.q_masks[0], pol.B/8*pol.n);/* DEBUG */
-                printf("\nB_MASKS, location: %llx size: %lu \n", pol.b_masks[0], pol.n*pol.B/8);/* DEBUG */
-                print_mem(pol.b_masks[0],pol.B/8*pol.n);/* DEBUG */
-                printf("\n");/* DEBUG */
+#if DEBUG
+                fprintf (stderr,"\n\nCreating %lu tables %lu of which will be %lux%lu,\n"
+                         "and %lu of which will be %lux%lu.\n\n", t, d.even_d, d.bitwidth,
+                         d.even_h, d.odd_d, d.bitwidth, d.odd_h);
+#endif
 
                 /* Create two large table arrays */
-                uint8_t (*even_tables)[d.even_d][d.width] = calloc(d.even_h * d.even_d, sizeof(uint8_t[d.width]));
-                uint8_t (*odd_tables) [d.odd_d] [d.width] = calloc(d.odd_h  * d.odd_d,  sizeof(uint8_t[d.width]));
-
-         
-                fill_tables(pol, d, even_tables, odd_tables);
+                uint8_t (*even_tables)[d.even_d][d.bitwidth/8] =
+                        calloc(d.even_h * d.even_d, sizeof(uint8_t[d.bitwidth/8]));
+                uint8_t (*odd_tables) [d.odd_d] [d.bitwidth/8] = 
+                        calloc(d.odd_h  * d.odd_d,  sizeof(uint8_t[d.bitwidth/8]));
                 
-                printf("Continue? Press enter ok?: ");
-                getchar();
+                fill_tables(pol, d, even_tables, odd_tables);
+
+#if DEBUG
+                fprintf(stderr,"Even tables: \n");
+                print_tables(d.even_h, d.even_d, d.bitwidth/8, even_tables);
+                fprintf(stderr,"Odd tables: \n");
+                print_tables(d.odd_h, d.odd_d, d.bitwidth/8, odd_tables);
+#endif
+                
+                /* Filter input here */
+
+                free(even_tables);
+                free(odd_tables);
         }
-        fprintf(stderr, "Tables created.\n");
 
         array2d_free(pol.q_masks);
         array2d_free(pol.b_masks);
 
         /* Filter incoming transmissions!!! */
-
 
         return EXIT_SUCCESS;
 }
@@ -120,7 +153,10 @@ policy read_policy(FILE * file)
 
         getline(&tmpstring, &n, file); /* Consume the first line (this is a gcc extension function)*/
         pol.pl = atoll(tmpstring);
+
+#if DEBUG
         fprintf(stderr,"Packet length: %"PRIu64"\n", pol.pl);
+#endif
 
         /* Scan the rest of the file, finding the number of lines and the max line length (which will be the max
          * relevant bits */
@@ -140,9 +176,11 @@ policy read_policy(FILE * file)
                         curr_bits ++ ;
                 }
         }
-        
+
+#if DEBUG
         fprintf(stderr, "%"PRIu64" rules parsed, with a max rule size of %"PRIu64" bits.\n",
                pol.n, pol.b);
+#endif
         
         /* Allocate the array since we know the max size. The additional 2 is for the \n\0 */    
         char ** rule_array = (char**) array2d_alloc(pol.n,  pol.b + 2);
@@ -161,10 +199,10 @@ policy read_policy(FILE * file)
         pol.N = 8 * (uint64_t) ceil(pol.n/8.0);
 
         /* Allocate space for ? masks. */
-        pol.q_masks = array2d_alloc(pol.n, pol.B);
+        pol.q_masks = array2d_alloc(pol.n, pol.B/8);
 
         /* Allocate space for 0,1 masks */
-        pol.b_masks = array2d_alloc(pol.n, pol.B);
+        pol.b_masks = array2d_alloc(pol.n, pol.B/8);
         
         /* Convert the ascii rules into bitmasks  */
         parse_q_masks(pol.n, rule_array, pol.q_masks);
@@ -182,9 +220,11 @@ void parse_q_masks(uint64_t rule_count, char ** rule_array, uint8_t ** q_masks)
         /* Go through each character in the rules and set the corresponding bit in the q_mask array to 0 or 1  */
         for(uint64_t i = 0; i < rule_count; i++){
                 for(uint64_t j = 0; rule_array[i][j] != '\n'; j++){
-                        if (rule_array[i][j] == '?') BitFalse(q_masks[i],j); 
-                        else BitTrue(q_masks[i], j);
-                }
+                        if (rule_array[i][j] == '?') 
+                                BitFalse(q_masks[i], j); 
+                        else 
+                                BitTrue(q_masks[i], j);
+                }                
         }
 }
 
@@ -205,11 +245,12 @@ void parse_b_masks(uint64_t rule_count, char ** rule_array, uint8_t ** b_masks)
    http://stackoverflow.com/questions/699968/display-the-binary-representation-of-a-number-in-c  */
 void printbits(uint8_t v)
 {
-        for(int i = 0; i < 8; i++) putchar('0' + ((v >> i) & 1));
+        for(int i = 0; i < 8; i++) putc('0' + ((v >> i) & 1),stderr);
 }
 
 /* Allocates a 2D array of uint8_t in a contiguous block of memory
- * which is initialized to zeros */
+ * which is initialized to zeros
+ * width is in bytes */
 uint8_t ** array2d_alloc(uint64_t height, uint64_t width)
 {
         uint8_t ** arr = malloc(height * sizeof(uint8_t*));
@@ -230,14 +271,16 @@ void array2d_free(uint8_t ** arr)
 /* Fills a filtering table given a policy  */
 void fill_tables(policy pol,
                  table_dims dims,
-                 uint8_t even_tables[dims.even_h][dims.even_d][dims.width/8],           
-                 uint8_t odd_tables [dims.odd_h][dims.odd_d][dims.width/8])
+                 uint8_t even_tables[dims.even_h][dims.even_d][dims.bitwidth/8],           
+                 uint8_t odd_tables [dims.odd_h][dims.odd_d][dims.bitwidth/8])
 {
         /* Precalculate even array size */
         uint64_t even_array_size= (uint64_t) ceil(dims.even_s/8.0);
 
         for (uint64_t d = 0; d < dims.even_d; ++d){
-                for(uint64_t w = 0; w < dims.width/8; w++){
+                /* This next loop iterates to pol.n instead of dims.bitwidth because there are only n rules in
+                 * pol.q_masks and pol.b_masks*/
+                for(uint64_t w = 0; w < pol.n; ++w){
                         /* Create a temporary array to copy the relevant q_mask bits into */
                         uint8_t q_temp[even_array_size];
                         memset(q_temp, 0, even_array_size); /* zero out */
@@ -250,7 +293,7 @@ void fill_tables(policy pol,
                         /* Copy the relevant bits into the temp array */
                         copy_section(pol.b_masks[w], b_temp, d*dims.even_s, dims.even_s);
                         
-                        for(uint64_t h = 0; h < dims.even_h; h++) {
+                        for(uint64_t h = 0; h < dims.even_h; ++h) {
                                 uint8_t num_temp[even_array_size];
                                 uint64_t h_temp = __builtin_bswap64(h); /* convert to big-endian */
                                 /* Copy even_s bits of big-endian version of h to the h_temp */
@@ -269,7 +312,9 @@ void fill_tables(policy pol,
         uint64_t offset = dims.even_d * dims.even_s;
         
         for (uint64_t d = 0; d < dims.odd_d; ++d){
-                for(uint64_t w = 0; w < dims.width/8; w++){
+                /* This next loop iterates to pol.n instead of dims.bitwidth because there are only n rules in
+                 * pol.q_masks and pol.b_masks*/
+                for(uint64_t w = 0; w < pol.n; ++w){
                         /* Create a temporary array to copy the relevant q_mask bits into */
                         uint8_t q_temp[odd_array_size];
                         memset(q_temp, 0, odd_array_size); /* zero out */
@@ -282,7 +327,7 @@ void fill_tables(policy pol,
                         /* Copy the relevant bits into the temp array */
                         copy_section(pol.b_masks[w], b_temp, offset + d*dims.odd_s, dims.odd_s);
                         
-                        for(uint64_t h = 0; h < dims.odd_h; h++){
+                        for(uint64_t h = 0; h < dims.odd_h; ++h){
                                 uint8_t num_temp[odd_array_size];
                                 uint64_t h_temp = __builtin_bswap64(h); /* convert to big-endian */
                                 /* Copy even_s bits of big-endian version of h to the h_temp */
@@ -323,13 +368,28 @@ void copy_section(const uint8_t * src_array, uint8_t * dst_array, uint64_t start
 /* Creates a single table for rule matching */
 uint8_t ** create_single_table(policy pol){
         fprintf(stderr, "Created a single table.\n");
+        
 }
 
-/* Prints a contiguous area of memory in binary starting with ptr of the given size */
-void print_mem(uint8_t * ptr, uint64_t size){
+/* Prints a contiguous area of memory in binary starting with ptr to an array of the given size */
+void print_mem(uint8_t * ptr, uint64_t size, uint64_t cols){
         for(uint64_t i = 0; i < size; i++){
                 printbits(ptr[i]);
-                if ((i+1) % 8 == 0) printf("\n");
-                else printf(" ");
+                if ((i+1) % cols == 0) fprintf(stderr,"\n");
+                else fprintf(stderr," ");
+        }
+}
+
+void print_tables(uint64_t h, uint64_t d, uint64_t w, uint8_t tables[h][d][w]){
+        for( uint64_t j = 0; j < d; j++){
+                fprintf(stderr,"Table #%"PRIu64":\n",j+1);
+                for (uint64_t i = 0; i < h; i++){        
+                        for( uint64_t k = 0; k < w; k++){
+                                printbits(tables[j][i][k]);
+                                fprintf(stderr," ");
+                        }
+                        fprintf(stderr,"\n");
+                }
+                fprintf(stderr,"-------------------------------------------\n");
         }
 }
