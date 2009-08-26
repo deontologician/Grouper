@@ -1,24 +1,25 @@
 
-tblcompile.c,495
+tblcompile.c,523
 #define DEBUG 2,24
 int main(4,44
 uint64_t min_tables(126,4784
 policy read_policy(156,6183
 void parse_q_masks(231,8800
-void parse_b_masks(246,9396
-void printbits(263,10172
-uint8_t ** array2d_alloc(271,10398
-void array2d_free(282,10765
-void fill_tables(289,10891
-bool rule_matches(385,16205
-void copy_section(397,16627
-uint8_t ** create_single_table(409,17089
-void print_mem(423,17553
-void print_tables(432,17861
-void read_input_and_classify(448,18566
-void and_bitarray(528,22032
+void parse_b_masks(248,9487
+void print_masks(263,10121
+void printbits(277,10632
+uint8_t ** array2d_alloc(285,10858
+void array2d_free(296,11225
+void fill_tables(303,11351
+bool rule_matches(406,17029
+void copy_section(418,17464
+uint8_t ** create_single_table(430,17926
+void print_mem(444,18390
+void print_tables(453,18698
+void read_input_and_classify(469,19401
+void and_bitarray(549,22867
 
-tblcompile.h,663
+tblcompile.h,664
 #define TABLE_ERROR 14,247
 #define SUCCESS 15,332
 #define FAILURE 16,351
@@ -40,5 +41,5 @@ tblcompile.h,663
         uint64_t even_s;39,1497
         uint64_t odd_s;40,1557
 } table_dims;41,1616
-#define lg(98,3741
-#define ones_mask(101,3826
+#define lg(101,3834
+#define ones_mask(104,3919

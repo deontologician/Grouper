@@ -73,7 +73,7 @@ void fill_tables(policy, table_dims, uint8_t[*][*][*], uint8_t[*][*][*]);
 
 /* Test whether a given byte array matches the b_array after being
  * masked by the q_array */
-bool rule_matches(uint8_t[], uint8_t[], uint8_t[], uint64_t);
+bool rule_matches(uint8_t[], const uint8_t[], const uint8_t[], uint64_t);
 
 /* Copies a section of a bit array to the beginning of another bit array */
 void copy_section(const uint8_t*, uint8_t*, uint64_t, uint64_t);
@@ -92,6 +92,9 @@ void read_input_and_classify(policy, table_dims, uint8_t[*][*][*],uint8_t[*][*][
 
 /* AND two bit arrays together, the second argument is modified */
 void and_bitarray(const uint8_t*, uint8_t*, uint64_t);
+
+/* Print out a bitmask table*/
+void print_masks(uint8_t**, uint64_t, uint64_t);
 /************************** Inline functions  *************************/
 
 /* easily find log2(r) */
