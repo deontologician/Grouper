@@ -75,7 +75,7 @@ typedef unsigned char *UByteP;  /* Pointer to an unsigned byte array */
     BitIsTrue((src),(bit)) ? BitTrue((dest),(bit)) : BitFalse((dest),(bit))
 
 #define BitValue(array,bit)     /* Return True or False depending on bit */ \
-    (BitIsTrue((array),(bit)) ? True : False)
+    (BitIsTrue((array),(bit)) ? true : false)
 
 #define BitSet(array,bit,value) /* Set bit to given value in array */ \
     (value) ? BitTrue((array),(bit)) : BitFalse((array),(bit))
