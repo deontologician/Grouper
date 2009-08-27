@@ -10,7 +10,7 @@ OBJS= $(SRCS:.c=.o)
 
 all: tblcompile
 
-tblcompile: tblcompile.c tblcompile.h
+tblcompile: tblcompile.c tblcompile.h xtrapbits.h
 	$(CC) $(CFLAGS) $(LIBS) -o $@ tblcompile.c
 
 

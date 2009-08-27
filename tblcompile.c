@@ -161,8 +161,9 @@ policy read_policy(FILE * file)
         size_t n = 80;
         char* tmpstring = malloc(sizeof(char[n]));
 
-        getline(&tmpstring, &n, file); /* Consume the first line (this is a gcc
-                                        * extension function)*/
+        /* Consume the first line (this is a gcc extension function)*/
+        getline(&tmpstring, &n, file); 
+        
         pol.pl = atoll(tmpstring);
 
 #if DEBUG
@@ -230,11 +231,9 @@ policy read_policy(FILE * file)
 /* Parse the rule files into ? masks   */
 void parse_q_masks(uint64_t rule_count, char ** rule_array, uint8_t ** q_masks)
 {
-        /* Declare j outside the loop so it can be referenced later */
-        uint64_t j;
         /* Go through each character in the rules and set the corresponding bit
          * in the q_mask array to 0 or 1  */
-        for(uint64_t i = 0; i < rule_count; i++){
+        for(uint64_t i = 0; i < rule_count; ++i){
                 for(uint64_t j = 0; rule_array[i][j] != '\n'; ++j){
                         if (rule_array[i][j] == '?') 
                                 BitFalse(q_masks[i], j); 
@@ -249,8 +248,8 @@ void parse_b_masks(uint64_t rule_count, char ** rule_array, uint8_t ** b_masks)
 {
         /* Go through each character in the rules and set the
          * corresponding bit in the b_mask array to 0 or 1  */
-        for(uint64_t i = 0; i < rule_count; i++){
-                for(uint64_t j = 0; rule_array[i][j] != '\n'; j++){
+        for(uint64_t i = 0; i < rule_count; ++i){
+                for(uint64_t j = 0; rule_array[i][j] != '\n'; ++j){
                         if (rule_array[i][j] == '0' || rule_array[i][j]=='?') 
                                 BitFalse(b_masks[i],j);
                         if (rule_array[i][j] == '1') 
@@ -291,8 +290,7 @@ uint8_t ** array2d_alloc(uint64_t height, uint64_t width)
         return arr;
 }
 
-/* Frees a 2d array that has been previously created by
- * array2d_alloc */
+/* Frees a 2d array that has been previously created by array2d_alloc */
 void array2d_free(uint8_t ** arr)
 {
         free(arr[0]);
@@ -328,7 +326,6 @@ void fill_tables(policy pol,
                         /* Copy the relevant bits into the temp array */
                         copy_section(pol.b_masks[w], b_temp, d*dims.even_s, 
                                      dims.even_s); 
-                        
                         for(uint64_t h = 0; h < dims.even_h; ++h) {
                                 uint8_t num_temp[e_array_Bwidth];
                                 memset(num_temp, 0, 
@@ -339,27 +336,34 @@ void fill_tables(policy pol,
                                 /* Copy even_s bits of big-endian version of h
                                  * to the num_temp */
                                 copy_section((uint8_t*) &h_temp, num_temp, 
-                                             64 - dims.even_s, dims.even_s);
+                                             64 - (dims.even_s*(dims.even_d-d) + 
+                                                   dims.odd_s*dims.odd_d),
+                                             dims.even_s);
+                                
+                                /* print_mem(pol.q_masks[w], 1, 8);         /\* DEBUG *\/ */
+                                /* print_mem(pol.b_masks[w], 1, 8);         /\* DEBUG *\/ */
+                                /* print_mem((uint8_t*)&h_temp, 8, 8);      /\* DEBUG *\/ */
+                                fprintf(stderr, "\n");                   /* DEBUG */
+                                print_mem(q_temp, e_array_Bwidth,8);     /* DEBUG */
+                                print_mem(b_temp, e_array_Bwidth,8);     /* DEBUG */
+                                print_mem(num_temp, e_array_Bwidth,8);   /* DEBUG */
+
                                 /* Set the appropriate bit in the lookup table
                                  * to 1 or 0 depending on whether the rule
                                  * matches */
                                 if(rule_matches(num_temp, q_temp, b_temp, 
                                                 e_array_Bwidth)){
-                                        fprintf(stderr, "1"); /* DEBUG */
                                         BitTrue(&even_tables[h][d][0], w);
-                                }else{
-                                        fprintf(stderr, "0"); /* DEBUG */
                                 }
                         }
-                        fprintf(stderr, "\n"); /* DEBUG */
                 }
         }
         /* Precalculate odd array size */
-        uint64_t odd_array_size= (uint64_t) ceil(dims.odd_s/8.0);
+        uint64_t o_array_Bwidth= (uint64_t) ceil(dims.odd_s/8.0);
         /* Offset to get to the beginning of the odd sections of the b and q
          * masks */
         uint64_t offset = dims.even_d * dims.even_s;
-        
+        fprintf(stderr, "Odds %d\n", __LINE__); /* DEBUG */
         for (uint64_t d = 0; d < dims.odd_d; ++d){
                 /* This next loop iterates to pol.n instead of dims.bitwidth
                  * because there are only n rules in pol.q_masks and
@@ -367,33 +371,43 @@ void fill_tables(policy pol,
                 for(uint64_t w = 0; w < pol.n; ++w){
                         /* Create a temporary array to copy the relevant q_mask
                          * bits into */
-                        uint8_t q_temp[odd_array_size];
-                        memset(q_temp, 0, odd_array_size); /* zero out */
+                        uint8_t q_temp[o_array_Bwidth];
+                        memset(q_temp, 0, o_array_Bwidth); /* zero out */
                         /* Copy the relevant bits into the temp array */
                         copy_section(pol.q_masks[w], q_temp,
                                      offset + d*dims.odd_s, dims.odd_s);
                         
                         /* Create a temporary array to copy the relevant b_mask
                          * bits into */
-                        uint8_t b_temp[odd_array_size];
-                        memset(b_temp, 0, odd_array_size); /* zero out */
+                        uint8_t b_temp[o_array_Bwidth];
+                        memset(b_temp, 0, o_array_Bwidth); /* zero out */
                         /* Copy the relevant bits into the temp array */
                         copy_section(pol.b_masks[w], b_temp, 
                                      offset + d*dims.odd_s, dims.odd_s);
-                        
                         for(uint64_t h = 0; h < dims.odd_h; ++h){
-                                uint8_t num_temp[odd_array_size];
+                                uint8_t num_temp[o_array_Bwidth];
                                 /* convert to big-endian */
                                 uint64_t h_temp = __builtin_bswap64(h);
                                 /* Copy even_s bits of big-endian version of h
                                  * to the h_temp */
                                 copy_section((uint8_t*) &h_temp, num_temp,
-                                             64 - dims.odd_s, dims.odd_s);
+                                             64 - (dims.odd_s*(dims.odd_d-d)),
+                                             dims.odd_s);
+
+                                /* fprintf(stderr,"\n%lu,%lu,%lu:\n",h,d,w);/\* DEBUG *\/ */
+                                /* print_mem(pol.q_masks[w], 1, 8);         /\* DEBUG *\/ */
+                                /* print_mem(pol.b_masks[w], 1, 8);         /\* DEBUG *\/ */
+                                /* print_mem((uint8_t*)&h_temp, 8, 8);      /\* DEBUG *\/ */
+                                fprintf(stderr, "\n");                   /* DEBUG */
+                                print_mem(q_temp, o_array_Bwidth,8);     /* DEBUG */
+                                print_mem(b_temp, o_array_Bwidth,8);     /* DEBUG */
+                                print_mem(num_temp, o_array_Bwidth,8);   /* DEBUG */
+
                                 /* Set the appropriate bit in the lookup table
                                  * to 1 or 0 depending on whether the rule
                                  * matches */
                                 if(rule_matches(num_temp, q_temp, b_temp, 
-                                                odd_array_size)){
+                                                o_array_Bwidth)){
                                         BitTrue(&odd_tables[h][d][0], w);
                                 }
                         }
@@ -418,7 +432,7 @@ bool rule_matches(uint8_t input[], const uint8_t q_mask[],
 void copy_section(const uint8_t * src_array, uint8_t * dst_array, 
                   uint64_t startbit, uint64_t size){
         for (uint64_t i = startbit; i < startbit + size; i++){
-                if(BitIsTrue(src_array, startbit)){
+                if(BitIsTrue(src_array, i)){
                         BitTrue(dst_array, i - startbit);
                 }else{
                         BitFalse(dst_array, i - startbit);
@@ -444,7 +458,7 @@ uint8_t ** create_single_table(policy pol){
 void print_mem(uint8_t * ptr, uint64_t size, uint64_t cols){
         for(uint64_t i = 0; i < size; ++i){
                 printbits(ptr[i]);
-                if ((i+1) % cols == 0) fprintf(stderr,"\n");
+                if ((i+1) % cols == 0 || i == size - 1) fprintf(stderr,"\n");
                 else fprintf(stderr," ");
         }
 }
