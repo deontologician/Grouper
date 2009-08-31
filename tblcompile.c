@@ -339,14 +339,14 @@ void fill_tables(policy pol,
                                              64 - (dims.even_s*(dims.even_d-d) + 
                                                    dims.odd_s*dims.odd_d),
                                              dims.even_s);
-                                
+                                /* fprintf(stderr, "\nmasks (%lu,%lu,%lu)\n",h,d,w); */
                                 /* print_mem(pol.q_masks[w], 1, 8);         /\* DEBUG *\/ */
                                 /* print_mem(pol.b_masks[w], 1, 8);         /\* DEBUG *\/ */
                                 /* print_mem((uint8_t*)&h_temp, 8, 8);      /\* DEBUG *\/ */
-                                fprintf(stderr, "\n");                   /* DEBUG */
-                                print_mem(q_temp, e_array_Bwidth,8);     /* DEBUG */
-                                print_mem(b_temp, e_array_Bwidth,8);     /* DEBUG */
-                                print_mem(num_temp, e_array_Bwidth,8);   /* DEBUG */
+                                /* fprintf(stderr, "\ntemps (%lu,%lu,%lu)\n",h,d,w); /\* DEBUG *\/ */
+                                /* print_mem(q_temp, e_array_Bwidth,8);     /\* DEBUG *\/ */
+                                /* print_mem(b_temp, e_array_Bwidth,8);     /\* DEBUG *\/ */
+                                /* print_mem(num_temp, e_array_Bwidth,8);   /\* DEBUG *\/ */
 
                                 /* Set the appropriate bit in the lookup table
                                  * to 1 or 0 depending on whether the rule
@@ -359,7 +359,7 @@ void fill_tables(policy pol,
                 }
         }
         /* Precalculate odd array size */
-        uint64_t o_array_Bwidth= (uint64_t) ceil(dims.odd_s/8.0);
+        uint64_t o_array_Bwidth = (uint64_t) ceil(dims.odd_s/8.0);
         /* Offset to get to the beginning of the odd sections of the b and q
          * masks */
         uint64_t offset = dims.even_d * dims.even_s;
@@ -386,6 +386,7 @@ void fill_tables(policy pol,
                                      offset + d*dims.odd_s, dims.odd_s);
                         for(uint64_t h = 0; h < dims.odd_h; ++h){
                                 uint8_t num_temp[o_array_Bwidth];
+                                memset(num_temp, 0, o_array_Bwidth);
                                 /* convert to big-endian */
                                 uint64_t h_temp = __builtin_bswap64(h);
                                 /* Copy even_s bits of big-endian version of h
@@ -393,12 +394,11 @@ void fill_tables(policy pol,
                                 copy_section((uint8_t*) &h_temp, num_temp,
                                              64 - (dims.odd_s*(dims.odd_d-d)),
                                              dims.odd_s);
-
-                                /* fprintf(stderr,"\n%lu,%lu,%lu:\n",h,d,w);/\* DEBUG *\/ */
-                                /* print_mem(pol.q_masks[w], 1, 8);         /\* DEBUG *\/ */
-                                /* print_mem(pol.b_masks[w], 1, 8);         /\* DEBUG *\/ */
-                                /* print_mem((uint8_t*)&h_temp, 8, 8);      /\* DEBUG *\/ */
-                                fprintf(stderr, "\n");                   /* DEBUG */
+                                fprintf(stderr, "\nmasks (%lu,%lu,%lu)\n",h,d,w);
+                                print_mem(pol.q_masks[w], 1, 8);         /* DEBUG */
+                                print_mem(pol.b_masks[w], 1, 8);         /* DEBUG */
+                                print_mem((uint8_t*) &h_temp, 8, 8);      /* DEBUG */
+                                fprintf(stderr, "\ntemps (%lu,%lu,%lu)\n",h,d,w); /* DEBUG */
                                 print_mem(q_temp, o_array_Bwidth,8);     /* DEBUG */
                                 print_mem(b_temp, o_array_Bwidth,8);     /* DEBUG */
                                 print_mem(num_temp, o_array_Bwidth,8);   /* DEBUG */
