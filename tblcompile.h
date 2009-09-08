@@ -27,6 +27,12 @@ typedef struct {
 } policy;
 #define POLICY_INIT {.pl = 0, .n = 0, .N = 0, .b = 0, .B = 0, .q_masks = NULL, .b_masks = NULL}
 
+/* Union to convert between uint64_t and uint8_t[8] */
+typedef union {
+  uint64_t num;
+  uint8_t arr[8];
+} union64;
+
 /* Holds the dimensions of the filtering tables */
 typedef struct {
         /* All of these dimensions are in bits */
@@ -88,7 +94,7 @@ void print_mem(uint8_t *,  uint64_t , uint64_t);
 void print_tables(uint64_t, uint64_t, uint64_t, uint8_t[*][*][*]);
 
 /* Filters incoming packets and classifies them to stdout */
-void read_input_and_classify(policy, table_dims, uint8_t[*][*][*],uint8_t[*][*][*]);
+void read_input_and_classify(policy, table_dims dims, uint8_t[*][*][*],uint8_t[*][*][*]);
 
 /* AND two bit arrays together, the second argument is modified */
 void and_bitarray(const uint8_t*, uint8_t*, uint64_t);

@@ -388,13 +388,13 @@ void fill_tables(policy pol,
                                 uint8_t num_temp[o_array_Bwidth];
                                 memset(num_temp, 0, o_array_Bwidth);
                                 /* convert to big-endian */
-                                uint64_t h_temp = __builtin_bswap64(h);
+                                uint64_t h_temp = h;//__builtin_bswap64(h);
                                 /* Copy even_s bits of big-endian version of h
                                  * to the h_temp */
                                 copy_section((uint8_t*) &h_temp, num_temp,
-                                             64 - (dims.odd_s*(dims.odd_d-d)),
+                                             0,
                                              dims.odd_s);
-                                fprintf(stderr, "\nmasks (%lu,%lu,%lu)\n",h,d,w);
+                                fprintf(stderr, "\nmasks (%"PRIu64",%lu,%lu)\n",h,d,w);
                                 print_mem(pol.q_masks[w], 1, 8);         /* DEBUG */
                                 print_mem(pol.b_masks[w], 1, 8);         /* DEBUG */
                                 print_mem((uint8_t*) &h_temp, 8, 8);      /* DEBUG */
