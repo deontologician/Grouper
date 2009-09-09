@@ -326,16 +326,16 @@ void fill_tables(policy pol,
                         /* Copy the relevant bits into the temp array */
                         copy_section(pol.b_masks[w], b_temp, d*dims.even_s, 
                                      dims.even_s); 
-                        for(uint64_t h = 0; h < dims.even_h; ++h) {
+                        for(union64 h = {.num = 0}; h.num < dims.even_h; ++h.num) {
                                 uint8_t num_temp[e_array_Bwidth];
                                 memset(num_temp, 0, 
                                        e_array_Bwidth*sizeof(uint8_t));
                                 /* convert to big-endian */
-                                uint64_t h_temp = __builtin_bswap64(h); 
+                                union64 h_temp = {.num = __builtin_bswap64(h.num)}; 
 
                                 /* Copy even_s bits of big-endian version of h
                                  * to the num_temp */
-                                copy_section((uint8_t*) &h_temp, num_temp, 
+                                copy_section(&h_temp, num_temp, 
                                              64 - (dims.even_s*(dims.even_d-d) + 
                                                    dims.odd_s*dims.odd_d),
                                              dims.even_s);
@@ -353,7 +353,7 @@ void fill_tables(policy pol,
                                  * matches */
                                 if(rule_matches(num_temp, q_temp, b_temp, 
                                                 e_array_Bwidth)){
-                                        BitTrue(&even_tables[h][d][0], w);
+                                        BitTrue(&even_tables[h.num][d][0], w);
                                 }
                         }
                 }

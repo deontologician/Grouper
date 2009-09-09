@@ -19,7 +19,7 @@ void print_tables(467,20052
 void read_input_and_classify(483,20755
 void and_bitarray(563,24221
 
-tblcompile.h,664
+tblcompile.h,777
 #define TABLE_ERROR 14,247
 #define SUCCESS 15,332
 #define FAILURE 16,351
@@ -32,14 +32,18 @@ tblcompile.h,664
         uint8_t ** b_masks;26,839
 } policy;27,914
 #define POLICY_INIT 28,924
-        uint64_t even_h;33,1139
-        uint64_t odd_h;34,1199
-        uint64_t even_d;35,1258
-        uint64_t odd_d;36,1317
-        uint64_t bitwidth;37,1375
-        uint64_t bytewidth;38,1434
-        uint64_t even_s;39,1497
-        uint64_t odd_s;40,1557
-} table_dims;41,1616
-#define lg(101,3834
-#define ones_mask(104,3919
+typedef union UNION64 union64;31,1076
+union UNION64 32,1107
+  uint64_t num;33,1123
+  uint8_t arr[arr34,1139
+        uint64_t even_h;40,1279
+        uint64_t odd_h;41,1339
+        uint64_t even_d;42,1398
+        uint64_t odd_d;43,1457
+        uint64_t bitwidth;44,1515
+        uint64_t bytewidth;45,1574
+        uint64_t even_s;46,1637
+        uint64_t odd_s;47,1697
+} table_dims;48,1756
+#define lg(108,3979
+#define ones_mask(111,4064

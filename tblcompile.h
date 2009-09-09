@@ -25,13 +25,15 @@ typedef struct {
         uint8_t ** q_masks; /* Masks representing ? in policy pattern */
         uint8_t ** b_masks; /* Masks representing 0,1 in policy pattern */
 } policy;
-#define POLICY_INIT {.pl = 0, .n = 0, .N = 0, .b = 0, .B = 0, .q_masks = NULL, .b_masks = NULL}
+#define POLICY_INIT {.pl = 0, .n = 0, .N = 0, .b = 0, .B = 0, \
+      .q_masks = NULL, .b_masks = NULL}
 
 /* Union to convert between uint64_t and uint8_t[8] */
-typedef union {
+typedef union UNION64 union64;
+union UNION64 {
   uint64_t num;
   uint8_t arr[8];
-} union64;
+};
 
 /* Holds the dimensions of the filtering tables */
 typedef struct {
