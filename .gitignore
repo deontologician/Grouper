@@ -5,3 +5,5 @@ tblcompile
 *.tbl
 old_code/*
 *.gch
+output.txt
+trace.txt
