@@ -79,10 +79,10 @@ int main(int argc, char* argv[])
                 };
 
 #if DEBUG
-                fprintf (stderr,"\n\nCreating %lu tables %lu of which will be "
-                         "%lux%lu,\nand %lu of which will be %lux%lu.\n\n", 
-                         t, d.even_d, d.bitwidth,d.even_h, d.odd_d, d.bitwidth, 
-                         d.odd_h);
+                fprintf(stderr,"\n\nCreating %"PRIu64" tables %"PRIu64" of "
+			"which will be %"PRIx64"%"PRIu64",\nand %"PRIu64" of "
+			"which will be %"PRIx64"%"PRIu64".\n\n",t, d.even_d, 
+			d.bitwidth, d.even_h, d.odd_d, d.bitwidth, d.odd_h);
 #endif
 
                 /* Create two large table arrays */
@@ -331,11 +331,11 @@ void fill_tables(policy pol,
                                 memset(num_temp, 0, 
                                        e_array_Bwidth*sizeof(uint8_t));
                                 /* convert to big-endian */
-                                union64 h_temp = {.num = __builtin_bswap64(h.num)}; 
+                                union64 h_temp = {.num = Bswap64(h.num)}; 
 
                                 /* Copy even_s bits of big-endian version of h
                                  * to the num_temp */
-                                copy_section(&h_temp, num_temp, 
+                                copy_section((uint8_t *)&h_temp.arr, num_temp, 
                                              64 - (dims.even_s*(dims.even_d-d) + 
                                                    dims.odd_s*dims.odd_d),
                                              dims.even_s);
@@ -351,8 +351,7 @@ void fill_tables(policy pol,
                                 /* Set the appropriate bit in the lookup table
                                  * to 1 or 0 depending on whether the rule
                                  * matches */
-                                if(rule_matches(num_temp, q_temp, b_temp, 
-                                                e_array_Bwidth)){
+                                if(rule_matches(e_array_Bwidth,num_temp,q_temp,b_temp)){
                                         BitTrue(&even_tables[h.num][d][0], w);
                                 }
                         }
@@ -388,17 +387,19 @@ void fill_tables(policy pol,
                                 uint8_t num_temp[o_array_Bwidth];
                                 memset(num_temp, 0, o_array_Bwidth);
                                 /* convert to big-endian */
-                                uint64_t h_temp = h;//__builtin_bswap64(h);
+                                uint64_t h_temp = h;//Bswap64(h);
                                 /* Copy even_s bits of big-endian version of h
                                  * to the h_temp */
                                 copy_section((uint8_t*) &h_temp, num_temp,
                                              0,
                                              dims.odd_s);
-                                fprintf(stderr, "\nmasks (%"PRIu64",%lu,%lu)\n",h,d,w);
+                                fprintf(stderr, "\nmasks (%"PRIu64",%"PRIu64","
+                                        "%"PRIu64")\n",h,d,w);
                                 print_mem(pol.q_masks[w], 1, 8);         /* DEBUG */
                                 print_mem(pol.b_masks[w], 1, 8);         /* DEBUG */
                                 print_mem((uint8_t*) &h_temp, 8, 8);      /* DEBUG */
-                                fprintf(stderr, "\ntemps (%lu,%lu,%lu)\n",h,d,w); /* DEBUG */
+                                fprintf(stderr, "\ntemps (%"PRIu64",%"PRIu64
+                                        ",%"PRIu64")\n",h,d,w); /* DEBUG */
                                 print_mem(q_temp, o_array_Bwidth,8);     /* DEBUG */
                                 print_mem(b_temp, o_array_Bwidth,8);     /* DEBUG */
                                 print_mem(num_temp, o_array_Bwidth,8);   /* DEBUG */
@@ -406,8 +407,7 @@ void fill_tables(policy pol,
                                 /* Set the appropriate bit in the lookup table
                                  * to 1 or 0 depending on whether the rule
                                  * matches */
-                                if(rule_matches(num_temp, q_temp, b_temp, 
-                                                o_array_Bwidth)){
+                                if(rule_matches(o_array_Bwidth,num_temp,q_temp,b_temp)){
                                         BitTrue(&odd_tables[h][d][0], w);
                                 }
                         }
@@ -417,8 +417,8 @@ void fill_tables(policy pol,
         
 /* test whether a given byte array matches the b_array after being
  * masked by the q_array  */
-bool rule_matches(uint8_t input[], const uint8_t q_mask[], 
-                  const uint8_t b_mask[], uint64_t size){
+bool rule_matches( uint64_t size, uint8_t input[size], const uint8_t q_mask[size], 
+                  const uint8_t b_mask[size]){
         /* test for equality a byte at a time */
         for (uint64_t i = 0; i < size; ++i){
                 if((input[i] & q_mask[i]) != b_mask[i]){
@@ -450,7 +450,7 @@ uint8_t ** create_single_table(policy pol){
                 
                 /* TODO: complete this code */
 
-        }        
+        }
 }
 
 /* Prints a contiguous area of memory in binary starting with ptr to an array of

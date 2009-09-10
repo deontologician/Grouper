@@ -1,5 +1,7 @@
 #pragma once
 
+#define _GNU_SOURCE /* This is to import getline (getline is linux specific) */
+
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -25,8 +27,7 @@ typedef struct {
         uint8_t ** q_masks; /* Masks representing ? in policy pattern */
         uint8_t ** b_masks; /* Masks representing 0,1 in policy pattern */
 } policy;
-#define POLICY_INIT {.pl = 0, .n = 0, .N = 0, .b = 0, .B = 0, \
-      .q_masks = NULL, .b_masks = NULL}
+#define POLICY_INIT {.pl = 0, .n = 0, .N = 0, .b = 0, .B = 0, .q_masks = NULL, .b_masks = NULL}
 
 /* Union to convert between uint64_t and uint8_t[8] */
 typedef union UNION64 union64;
@@ -77,11 +78,14 @@ uint8_t ** array2d_alloc(uint64_t, uint64_t);
 void array2d_free(uint8_t **);
 
 /* Fills the filtering tables given a policy */
-void fill_tables(policy, table_dims, uint8_t[*][*][*], uint8_t[*][*][*]);
+void fill_tables(policy pol, table_dims dims, 
+                 uint8_t even_tables[dims.even_h][dims.even_d][dims.bytewidth],
+                 uint8_t odd_tables[dims.odd_h][dims.odd_d][dims.bytewidth]);
 
 /* Test whether a given byte array matches the b_array after being
  * masked by the q_array */
-bool rule_matches(uint8_t[], const uint8_t[], const uint8_t[], uint64_t);
+bool rule_matches( uint64_t size, uint8_t input[size],  
+                  const uint8_t q_mask[size], const uint8_t b_mask[size]);
 
 /* Copies a section of a bit array to the beginning of another bit array */
 void copy_section(const uint8_t*, uint8_t*, uint64_t, uint64_t);
@@ -93,10 +97,12 @@ uint8_t ** create_single_table(policy);
 void print_mem(uint8_t *,  uint64_t , uint64_t);
 
 /* Prints out lookup tables in a readable format  */
-void print_tables(uint64_t, uint64_t, uint64_t, uint8_t[*][*][*]);
+void print_tables(uint64_t h, uint64_t d, uint64_t w, uint8_t[h][d][w]);
 
 /* Filters incoming packets and classifies them to stdout */
-void read_input_and_classify(policy, table_dims dims, uint8_t[*][*][*],uint8_t[*][*][*]);
+void read_input_and_classify(policy pol, table_dims dim, 
+     uint8_t even_tables[dim.even_h][dim.even_d][dim.bytewidth], 
+     uint8_t odd_tables[dim.odd_h][dim.odd_d][dim.bytewidth]);
 
 /* AND two bit arrays together, the second argument is modified */
 void and_bitarray(const uint8_t*, uint8_t*, uint64_t);
@@ -110,3 +116,16 @@ void print_masks(uint8_t**, uint64_t, uint64_t);
 
 /* Create a mask of 1's of length x */
 #define ones_mask(x) ((1L << (x + 1)) - 1)
+
+/* Swap byte-order of a uint64_t. 
+   Adapted from gcc trunk gcc/libgcc2.c */
+inline uint64_t Bswap64(uint64_t u){
+        return ((((u) & 0xff00000000000000ull) >> 56)
+                | (((u) & 0x00ff000000000000ull) >> 40)
+                | (((u) & 0x0000ff0000000000ull) >> 24)
+                | (((u) & 0x000000ff00000000ull) >>  8)
+                | (((u) & 0x00000000ff000000ull) <<  8)
+                | (((u) & 0x0000000000ff0000ull) << 24)
+                | (((u) & 0x000000000000ff00ull) << 40)
+                | (((u) & 0x00000000000000ffull) << 56));
+}
