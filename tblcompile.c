@@ -335,7 +335,7 @@ void fill_tables(policy pol,
 
                                 /* Copy even_s bits of big-endian version of h
                                  * to the num_temp */
-                                copy_section((uint8_t *)&h_temp.arr, num_temp, 
+                                copy_section(h_temp.arr, num_temp, 
                                              64 - (dims.even_s*(dims.even_d-d) + 
                                                    dims.odd_s*dims.odd_d),
                                              dims.even_s);
@@ -418,7 +418,8 @@ void fill_tables(policy pol,
 /* test whether a given byte array matches the b_array after being
  * masked by the q_array  */
 bool rule_matches( uint64_t size, uint8_t input[size], const uint8_t q_mask[size], 
-                  const uint8_t b_mask[size]){
+                  const uint8_t b_mask[size])
+{
         /* test for equality a byte at a time */
         for (uint64_t i = 0; i < size; ++i){
                 if((input[i] & q_mask[i]) != b_mask[i]){
@@ -430,7 +431,8 @@ bool rule_matches( uint64_t size, uint8_t input[size], const uint8_t q_mask[size
 
 /* Copies a section of a bit array to the beginning of another bit array */
 void copy_section(const uint8_t * src_array, uint8_t * dst_array, 
-                  uint64_t startbit, uint64_t size){
+                  uint64_t startbit, uint64_t size)
+{
         for (uint64_t i = startbit; i < startbit + size; i++){
                 if(BitIsTrue(src_array, i)){
                         BitTrue(dst_array, i - startbit);
@@ -441,7 +443,8 @@ void copy_section(const uint8_t * src_array, uint8_t * dst_array,
 } 
         
 /* Creates a single table for rule matching */
-uint8_t ** create_single_table(policy pol){
+uint8_t ** create_single_table(policy pol)
+{
         uint64_t height = (uint64_t) exp2(pol.b);
         uint64_t width  = 8 * (uint64_t) ceil(ceil(lg(pol.n)) / 8.0);
         uint8_t (*table)[width] = calloc(height, width);
@@ -455,7 +458,8 @@ uint8_t ** create_single_table(policy pol){
 
 /* Prints a contiguous area of memory in binary starting with ptr to an array of
  * the given size */
-void print_mem(uint8_t * ptr, uint64_t size, uint64_t cols){
+void print_mem(uint8_t * ptr, uint64_t size, uint64_t cols)
+{
         for(uint64_t i = 0; i < size; ++i){
                 printbits(ptr[i]);
                 if ((i+1) % cols == 0 || i == size - 1) fprintf(stderr,"\n");
@@ -464,7 +468,8 @@ void print_mem(uint8_t * ptr, uint64_t size, uint64_t cols){
 }
 
 /* Prints out lookup tables in a readable format */
-void print_tables(uint64_t h, uint64_t d, uint64_t w, uint8_t tables[h][d][w]){
+void print_tables(uint64_t h, uint64_t d, uint64_t w, uint8_t tables[h][d][w])
+{
         for( uint64_t j = 0; j < d; ++j){
                 fprintf(stderr,"Table #%"PRIu64":\n",j+1);
                 for (uint64_t i = 0; i < h; ++i){
@@ -560,8 +565,23 @@ void read_input_and_classify(policy pol, table_dims dim,
 }
 
 /* AND two bit arrays together, the second argument holds the results */
-void and_bitarray(const uint8_t* new, uint8_t* total, uint64_t size){
+void and_bitarray(const uint8_t* new, uint8_t* total, uint64_t size)
+{
         for (uint64_t i = 0; i < size; ++i){
                 total[i] &= new[i];
         }
+}
+
+/* Swap byte-order of a uint64_t. 
+   Adapted from gcc trunk gcc/libgcc2.c */
+uint64_t Bswap64(uint64_t u)
+{
+        return ((((u) & 0xff00000000000000ull) >> 56)
+                | (((u) & 0x00ff000000000000ull) >> 40)
+                | (((u) & 0x0000ff0000000000ull) >> 24)
+                | (((u) & 0x000000ff00000000ull) >>  8)
+                | (((u) & 0x00000000ff000000ull) <<  8)
+                | (((u) & 0x0000000000ff0000ull) << 24)
+                | (((u) & 0x000000000000ff00ull) << 40)
+                | (((u) & 0x00000000000000ffull) << 56));
 }

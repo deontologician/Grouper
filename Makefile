@@ -17,7 +17,7 @@ tblcompile: tblcompile.c tblcompile.h xtrapbits.h
 #utility targets
 clean:
 	@-rm *~ *.o $(NAME) 2> /dev/null
-quicktest:
+quicktest: tblcompile
 	./tblcompile 16 rule_small.pol input.dat output.txt
 
 #hack to get flymake mode to work with emacs 22
