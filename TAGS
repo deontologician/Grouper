@@ -1,51 +1,54 @@
 
-tblcompile.c,550
-#define DEBUG 2,24
-int main(4,44
-uint64_t min_tables(126,4759
-policy read_policy(156,6158
-void parse_q_masks(232,8751
-void parse_b_masks(247,9347
-void print_masks(262,9981
-void printbits(276,10492
-uint8_t ** array2d_alloc(284,10718
-void array2d_free(294,11082
-void fill_tables(301,11208
-bool rule_matches(420,18341
-void copy_section(433,18790
-uint8_t ** create_single_table(446,19246
-void print_mem(461,19703
-void print_tables(471,20029
-void read_input_and_classify(488,20733
-void and_bitarray(568,24199
-uint64_t Bswap64(577,24442
+tblcompile.c,530
+int main(3,25
+uint64_t min_tables(121,4614
+policy read_policy(151,6013
+void parse_q_masks(226,8547
+void parse_b_masks(241,9171
+void print_masks(256,9836
+void printbits(270,10329
+uint8_t ** array2d_alloc(278,10555
+void array2d_free(288,10919
+void fill_tables(295,11045
+bool rule_matches(394,16620
+void copy_section(407,17069
+uint8_t ** create_single_table(420,17525
+void print_mem(435,17982
+void print_tables(445,18290
+void read_input_and_classify(462,18949
+void and_bitarray(542,22396
+uint64_t Bswap64(551,22639
 
-tblcompile.h,807
+tblcompile.h,906
 #define _GNU_SOURCE 3,14
-#define TABLE_ERROR 16,558
-#define SUCCESS 17,643
-#define FAILURE 18,662
-        uint64_t pl;21,699
-        uint64_t n;22,747
-        uint64_t N;23,797
-        uint64_t b;24,876
-        uint64_t B;25,945
-        uint8_t ** q_masks;27,1077
-        uint8_t ** b_masks;28,1150
-} policy;29,1225
-#define POLICY_INIT 30,1235
-typedef union UNION64 union64;33,1387
-union UNION64 34,1418
-  uint64_t num;35,1434
-  uint8_t arr[arr36,1450
-        uint64_t even_h;42,1590
-        uint64_t odd_h;43,1650
-        uint64_t even_d;44,1709
-        uint64_t odd_d;45,1768
-        uint64_t bitwidth;46,1826
-        uint64_t bytewidth;47,1885
-        uint64_t even_s;48,1948
-        uint64_t odd_s;49,2008
-} table_dims;50,2067
-#define lg(115,4582
-#define ones_mask(118,4667
+#define DEBUG 15,557
+#define TABLE_ERROR 16,577
+#define SUCCESS 17,662
+#define FAILURE 18,681
+        uint64_t pl;21,718
+        uint64_t n;22,766
+        uint64_t N;23,816
+        uint64_t b;24,895
+        uint64_t B;25,964
+        uint8_t ** q_masks;27,1096
+        uint8_t ** b_masks;28,1169
+} policy;29,1244
+#define POLICY_INIT 30,1254
+typedef union UNION64 union64;33,1406
+union UNION64 34,1437
+  uint64_t num;35,1453
+  uint8_t arr[arr36,1469
+        uint64_t even_h;42,1609
+        uint64_t odd_h;43,1669
+        uint64_t even_d;44,1728
+        uint64_t odd_d;45,1787
+        uint64_t bitwidth;46,1845
+        uint64_t bytewidth;47,1904
+        uint64_t even_s;48,1967
+        uint64_t odd_s;49,2027
+} table_dims;50,2086
+#define lg(115,4601
+ #define Trace(123,4791
+ #define Trace(125,4845
+#define Print(127,4874
+#define PackingIndex(130,4978

@@ -12,7 +12,7 @@
 #include "xtrapbits.h"          /* Bitshifting macros */
 
 /************************** Definitions  *************************/
-
+#define DEBUG true 
 #define TABLE_ERROR 0 /* Defined for invalid return value of getMinNumberOfTables */
 #define SUCCESS 1;
 #define FAILURE 0;
@@ -114,9 +114,19 @@ void print_masks(uint8_t**, uint64_t, uint64_t);
 /* easily find log2(r) */
 #define lg(r) (log((double) (r)) / log(2.0))
 
-/* Create a mask of 1's of length x */
-#define ones_mask(x) ((1L << (x + 1)) - 1)
-
 /* Swap byte-order of a uint64_t. 
    Adapted from gcc trunk gcc/libgcc2.c */
 uint64_t Bswap64(uint64_t u);
+
+/* Handy print macros */
+#if DEBUG
+ #define Trace(...) fprintf(stderr,__VA_ARGS__)
+#else
+ #define Trace(...) 0
+#endif
+#define Print(...) fprintf(stdout,__VA_ARGS__)
+
+/* Return index in packing order (msb in byte first) */
+#define PackingIndex(bit) ((((bit)/BitsInByte)*BitsInByte)  \
+                          + (BitsInByte - 1 - (bit)%BitsInByte))
+
