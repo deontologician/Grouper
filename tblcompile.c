@@ -269,7 +269,7 @@ void print_masks(uint8_t ** q_masks, uint64_t height, uint64_t width)
    -a-number-in-c  */
 void printbits(uint8_t v)
 {
-        for(int i = 0; i < 8; ++i) putc('0' + ((v >> i) & 1), stderr);
+        for(int i = 0; i < 8; ++i) putc('0' + ((v >> (i)) & 1), stderr);
 }
 
 /* Allocates a 2D array of uint8_t in a contiguous block of memory
@@ -299,11 +299,12 @@ void fill_tables(policy pol,
 {
         /* Precalculate even array Byte width */
         uint64_t e_array_Bwidth= (uint64_t) ceil(dims.even_s/8.0);
-
+        
         for (uint64_t d = 0; d < dims.even_d; ++d){
                 /* This next loop iterates to pol.n instead of dims.bitwidth
                  * because there are only n rules in pol.q_masks and
                  * pol.b_masks*/
+                Trace("Even Table #%"PRIu64"\n",d+1);
                 for(uint64_t w = 0; w < pol.n; ++w){
                         /* Create a temporary array to copy the relevant q_mask
                          * bits into */
@@ -329,11 +330,20 @@ void fill_tables(policy pol,
                                 /* Copy even_s bits of big-endian version of h
                                  * to the num_temp */
                                 copy_section(h.arr, num_temp,0,dims.even_s);
+                                /* Trace("Q:");print_mem(pol.q_masks[w],pol.N/8,8); */
+                                /* Trace("B:");print_mem(pol.b_masks[w],pol.N/8,8); */
+                                /* Trace("--\n"); */
+                                /* Trace("Q-temp:");print_mem(q_temp,e_array_Bwidth, 8); */
+                                /* Trace("B-temp:");print_mem(b_temp,e_array_Bwidth, 8); */
+                                /* Trace("H.arr :");print_mem(h.arr,e_array_Bwidth, 8); */
                                 /* Set the appropriate bit in the lookup table
                                  * to 1 or 0 depending on whether the rule
                                  * matches */
                                 if(rule_matches(e_array_Bwidth,num_temp,q_temp,b_temp)){
                                         BitTrue(&even_tables[h.num][d][0], w);
+                                        /* Trace("\x1b[0;32;40m====\x1b[0;37;40m\n"); */
+                                }else{
+                                        /* Trace("\x1b[0;31;40m====\x1b[0;37;40m\n"); */
                                 }
                         }
                 }
@@ -347,6 +357,7 @@ void fill_tables(policy pol,
                 /* This next loop iterates to pol.n instead of dims.bitwidth
                  * because there are only n rules in pol.q_masks and
                  * pol.b_masks */
+                Trace("Odd Table #%"PRIu64"\n",d+1);
                 for(uint64_t w = 0; w < pol.n; ++w){
                         /* Create a temporary array to copy the relevant q_mask
                          * bits into */
@@ -369,21 +380,22 @@ void fill_tables(policy pol,
                                 /* Copy even_s bits of the number into the
                                  temporary matching variable*/
                                 copy_section(h.arr, num_temp,0,dims.odd_s);
-                                Trace("Q:");print_mem(pol.q_masks[w],pol.N/8,8);
-                                Trace("B:");print_mem(pol.b_masks[w],pol.N/8,8);
-                                Trace("--\n");
-                                Trace("Q-temp:");print_mem(q_temp,o_array_Bwidth, 8);
-                                Trace("B-temp:");print_mem(b_temp,o_array_Bwidth, 8);
-                                Trace("H.arr :");print_mem(h.arr,o_array_Bwidth, 8);
+                                /* Trace("Q:");print_mem(pol.q_masks[w],pol.N/8,8); */
+                                /* Trace("B:");print_mem(pol.b_masks[w],pol.N/8,8); */
+                                /* Trace("--\n"); */
+                                /* Trace("Q-temp:");print_mem(q_temp,o_array_Bwidth, 8); */
+                                /* Trace("B-temp:");print_mem(b_temp,o_array_Bwidth, 8); */
+                                /* Trace("H.arr :");print_mem(h.arr,o_array_Bwidth, 8); */
  
                                 /* Set the appropriate bit in the lookup table
                                  * to 1 or 0 depending on whether the rule
                                  * matches */
                                 if(rule_matches(o_array_Bwidth,num_temp,q_temp,b_temp)){
                                         BitTrue(&odd_tables[h.num][d][0], w);
-                                        Trace("A match\n");
-                                }else Trace("Not a match\n");
-                                Trace("====\n");
+                                        /* Trace("\x1b[0;32;40m====\x1b[0;37;40m\n"); */
+                                }else{
+                                        /* Trace("\x1b[0;31;40m====\x1b[0;37;40m\n"); */
+                                }
                         }
                 }
         }
@@ -463,22 +475,18 @@ void read_input_and_classify(policy pol, table_dims dim,
                      uint8_t even_tables[dim.even_h][dim.even_d][dim.bytewidth], 
                      uint8_t odd_tables[dim.odd_h][dim.odd_d][dim.bytewidth])
 {
-        uint64_t loop_count = 0;
-        /* Process input until EOF */
-        while(true){
-                /* Place to store the current input */
-                uint8_t inpacket[dim.bytewidth];
+        
+        uint64_t packets_read = 0; 
+        /* Place to store the current input */
+        uint8_t inpacket[dim.bytewidth];
 
-                /* Read in bytewidth bytes, and break if less than that is read
-                 * in */
-                if (fread(inpacket, sizeof(uint8_t), dim.bytewidth, stdin) 
-                    < dim.bytewidth){
-                        break;
-                }
-
+        /* Read in bytewidth bytes and end if less than that is read in */
+        while(fread(inpacket, sizeof(uint8_t), dim.bytewidth, stdin) == dim.bytewidth){
+                Trace("In  : ");print_mem(inpacket, dim.bytewidth, 8);
+                Trace("\n");
                 /* Create a temporary spot for reading in the inpacket  */
-                uint64_t even_index[dim.even_d];
-                uint64_t odd_index[dim.odd_d];
+                union64 even_index[dim.even_d];
+                union64 odd_index[dim.odd_d];
                 /* Zero out byte arrays */
                 memset(even_index, 0, dim.even_d*sizeof(uint64_t));
                 memset(odd_index, 0, dim.odd_d*sizeof(uint64_t));
@@ -486,9 +494,12 @@ void read_input_and_classify(policy pol, table_dims dim,
                 /* Copy in sections of inpacket to even_index array*/
                 for (uint64_t i = 0; i < dim.even_d; ++i){
                         copy_section(inpacket,
-                                     (uint8_t*) &even_index[i], 
+                                     even_index[i].arr, 
                                      i*dim.even_s, dim.even_s);
+                        /* Trace("Even#%"PRIu64": ",i); */
+                        /* print_mem(even_index[i].arr, 8, 8); */
                 }
+                
 
                 /* precompute bit offset of odd sections  */
                 uint64_t offset = dim.even_d*dim.even_s;
@@ -498,6 +509,8 @@ void read_input_and_classify(policy pol, table_dims dim,
                         copy_section(inpacket,
                                      (uint8_t*) &odd_index[i], 
                                      offset + i*dim.odd_s, dim.odd_s);
+                        /* Trace("Odd#%"PRIu64": ",i); */
+                        /* print_mem(odd_index[i].arr, 8, 8); */
                 }
                 
                 /* create a running total to decide which rule is satisfied */
@@ -505,21 +518,21 @@ void read_input_and_classify(policy pol, table_dims dim,
                 /* Zero out bit_total (may be a bit paranoid) */
                 memset(bit_total, 0, pol.N/8);
                 /* Copy the first bit array into the total */
-                memcpy(bit_total, &even_tables[even_index[0]][0][0], pol.N/8);
+                memcpy(bit_total, &even_tables[even_index[0].num][0][0], pol.N/8);
                 /* Create a temporary variable to and with the total */
                 uint8_t tmp[pol.N/8];
 
                 /* Loop through the remaining even bit arrays and AND them with
                  * the total */
                 for(uint64_t i = 1; i < dim.even_d;++i){
-                        memcpy(tmp, &even_tables[even_index[i]][i][0], pol.N/8);
+                        memcpy(tmp, &even_tables[even_index[i].num][i][0], pol.N/8);
                         and_bitarray(bit_total,tmp, pol.N/8);
                 }
 
-                /* Loop through the remaining odd bit arrays and AND them with
+                 /* Loop through the remaining odd bit arrays and AND them with
                  * the total */
                 for(uint64_t i = 0; i < dim.odd_d; ++i){
-                        memcpy(tmp, &odd_tables[odd_index[i]][i][0], pol.N/8);
+                        memcpy(tmp, &odd_tables[odd_index[i].num][i][0], pol.N/8);
                         and_bitarray(bit_total,tmp, pol.N/8);
                 }
                 
@@ -529,12 +542,10 @@ void read_input_and_classify(policy pol, table_dims dim,
                                 break;
                         }
                 }
-                loop_count++;
+                packets_read++;
         }
 
-#if DEBUG
-        Trace("Packets read in: %"PRIu64"\n", loop_count);
-#endif
+        Trace("Packets read in: %"PRIu64"\n", packets_read);
 
 }
 
