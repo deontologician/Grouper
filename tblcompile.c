@@ -62,7 +62,7 @@ int main(int argc, char* argv[])
 
         /* Handle the special single table case */
         if (t == 1){    
-                uint8_t ** single_table = create_single_table(pol);
+                //uint8_t ** single_table = create_single_table(pol);
         }else{
                 /* Calculate heights and depths */
                 table_dims d = {
@@ -429,18 +429,18 @@ void copy_section(const uint8_t * src_array, uint8_t * dst_array,
 } 
         
 /* Creates a single table for rule matching */
-uint8_t ** create_single_table(policy pol)
-{
-        uint64_t height = (uint64_t) exp2(pol.b);
-        uint64_t width  = 8 * (uint64_t) ceil(ceil(lg(pol.n)) / 8.0);
-        uint8_t (*table)[width] = calloc(height, width);
+/* uint8_t ** create_single_table(policy pol) */
+/* { */
+/*         uint64_t height = (uint64_t) exp2(pol.b); */
+/*         uint64_t width  = 8 * (uint64_t) ceil(ceil(lg(pol.n)) / 8.0); */
+/*         uint8_t (*table)[width] = calloc(height, width); */
         
-        for(uint64_t i = 0; i < height; ++i){
+/*         for(uint64_t i = 0; i < height; ++i){ */
                 
-                /* TODO: complete this code */
+/*                 /\* TODO: complete this code *\/ */
 
-        }
-}
+/*         } */
+/* } */
 
 /* Prints a contiguous area of memory in binary starting with ptr to an array of
  * the given size */
