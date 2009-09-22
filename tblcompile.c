@@ -508,7 +508,7 @@ void read_input_and_classify(policy pol, table_dims dim,
                 /* Copy the first bit array into the total */
                 memcpy(bit_total, &even_tables[even_index[0].num][0][0], pol.N/8);
                 /* Create a temporary variable to and with the total */
-                uint8_t tmp[pol.N/8];
+                uint8_t tmp[pol.N/8]; 
 
                 /* Loop through the remaining even bit arrays and AND them with
                  * the total */
