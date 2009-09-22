@@ -53,29 +53,29 @@ typedef struct {
 
 /* Determine the minimum number of tables that will fit in a
    prescribed amount of memory */
-uint64_t min_tables(uint64_t, uint64_t, uint64_t);
+uint64_t min_tables(uint64_t m, uint64_t n, uint64_t b);
 
 /* Find the dimensions of a rule file, number of lines and max rule length */
-policy read_policy(FILE *);
+policy read_policy(FILE * file);
 
 /* Parse the rule files into ? masks   */
-void parse_q_masks(uint64_t, char **, uint8_t **);
+void parse_q_masks(uint64_t rule_count, char **rule_array, uint8_t **q_masks);
 
 /* Parse the rule files into bitmasks  */
-void parse_b_masks(uint64_t, char **, uint8_t **);
+void parse_b_masks(uint64_t rule_count, char **rule_array, uint8_t **b_masks);
 
 /* Creates a binary representation of a binary string.  Adapted from:
    http://stackoverflow.com/questions/699968/display-the-binary-representation-
    of-a-number-in-c  */
-void printbits(uint8_t);
+void printbits(uint8_t byte);
 
 /* Alocates a 2-d array of uint8_t in a contiguous block of memory
  * which is initialized to zeros */
-uint8_t ** array2d_alloc(uint64_t, uint64_t);
+uint8_t ** array2d_alloc(uint64_t height, uint64_t width);
 
 /* Frees a 2d array that has been previously created by
  * array2d_alloc */
-void array2d_free(uint8_t **);
+void array2d_free(uint8_t ** arr);
 
 /* Fills the filtering tables given a policy */
 void fill_tables(policy pol, table_dims dims, 
@@ -88,13 +88,13 @@ bool rule_matches( uint64_t size, uint8_t input[size],
                   const uint8_t q_mask[size], const uint8_t b_mask[size]);
 
 /* Copies a section of a bit array to the beginning of another bit array */
-void copy_section(const uint8_t*, uint8_t*, uint64_t, uint64_t);
+void copy_section(const uint8_t *src_array, uint8_t *dst_array, uint64_t startbit, uint64_t size);
 
 /* Creates a single table for rule matching */
-uint8_t ** create_single_table(policy);
+uint8_t ** create_single_table(policy pol);
 
 /* Prints a contiguous area of memory in binary starting with ptr and of the given size */
-void print_mem(uint8_t *,  uint64_t , uint64_t);
+void print_mem(uint8_t * start,  uint64_t size, uint64_t cols);
 
 /* Prints out lookup tables in a readable format  */
 void print_tables(uint64_t h, uint64_t d, uint64_t w, uint8_t[h][d][w]);
@@ -105,10 +105,10 @@ void read_input_and_classify(policy pol, table_dims dim,
      uint8_t odd_tables[dim.odd_h][dim.odd_d][dim.bytewidth]);
 
 /* AND two bit arrays together, the second argument is modified */
-void and_bitarray(const uint8_t*, uint8_t*, uint64_t);
+void and_bitarray(const uint8_t *new, uint8_t *total, uint64_t size);
 
 /* Print out a bitmask table*/
-void print_masks(uint8_t**, uint64_t, uint64_t);
+void print_masks(uint8_t ** q_masks, uint64_t height, uint64_t width);
 /************************** Inline functions  *************************/
 
 /* easily find log2(r) */

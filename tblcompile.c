@@ -156,7 +156,7 @@ policy read_policy(FILE * file)
         size_t n = 80;
         char* tmpstring = malloc(sizeof(char[n]));
 
-        /* Consume the first line (this is a gcc extension function)*/
+        /* Consume the first line */
         getline(&tmpstring, &n, file); 
         
         pol.pl = atoll(tmpstring);
@@ -267,9 +267,9 @@ void print_masks(uint8_t ** q_masks, uint64_t height, uint64_t width)
 /* Creates a binary representation of a binary string.  Adapted from:
    http://stackoverflow.com/questions/699968/display-the-binary-representation-of
    -a-number-in-c  */
-void printbits(uint8_t v)
+void printbits(uint8_t byte)
 {
-        for(int i = 0; i < 8; ++i) putc('0' + ((v >> (i)) & 1), stderr);
+        for(int i = 0; i < 8; ++i) putc('0' + ((byte >> (i)) & 1), stderr);
 }
 
 /* Allocates a 2D array of uint8_t in a contiguous block of memory
@@ -444,10 +444,10 @@ uint8_t ** create_single_table(policy pol)
 
 /* Prints a contiguous area of memory in binary starting with ptr to an array of
  * the given size */
-void print_mem(uint8_t * ptr, uint64_t size, uint64_t cols)
+void print_mem(uint8_t * start, uint64_t size, uint64_t cols)
 {
         for(uint64_t i = 0; i < size; ++i){
-                printbits(ptr[i]);
+                printbits(start[i]);
                 if ((i+1) % cols == 0 || i == size - 1) Trace("\n");
                 else Trace(" ");
         }
@@ -487,32 +487,20 @@ void read_input_and_classify(policy pol, table_dims dim,
                 /* Create a temporary spot for reading in the inpacket  */
                 union64 even_index[dim.even_d];
                 union64 odd_index[dim.odd_d];
-                /* Zero out byte arrays */
-                memset(even_index, 0, dim.even_d*sizeof(uint64_t));
-                memset(odd_index, 0, dim.odd_d*sizeof(uint64_t));
+                /* Zero out index arrays */
+                memset(even_index, 0, dim.even_d*sizeof(union64));
+                memset(odd_index, 0, dim.odd_d*sizeof(union64));
                 
                 /* Copy in sections of inpacket to even_index array*/
                 for (uint64_t i = 0; i < dim.even_d; ++i){
                         copy_section(inpacket,
                                      even_index[i].arr, 
                                      i*dim.even_s, dim.even_s);
-                        /* Trace("Even#%"PRIu64": ",i); */
-                        /* print_mem(even_index[i].arr, 8, 8); */
+                        Trace("Even#%"PRIu64": ",i);
+                        print_mem(even_index[i].arr, 8, 8);
                 }
                 
-
                 /* precompute bit offset of odd sections  */
-                uint64_t offset = dim.even_d*dim.even_s;
-
-                /* Copy in sections of inpacket to odd index arrays */
-                for (uint64_t i = 0; i < dim.odd_d; ++i){
-                        copy_section(inpacket,
-                                     (uint8_t*) &odd_index[i], 
-                                     offset + i*dim.odd_s, dim.odd_s);
-                        /* Trace("Odd#%"PRIu64": ",i); */
-                        /* print_mem(odd_index[i].arr, 8, 8); */
-                }
-                
                 /* create a running total to decide which rule is satisfied */
                 uint8_t bit_total[pol.N/8];
                 /* Zero out bit_total (may be a bit paranoid) */
