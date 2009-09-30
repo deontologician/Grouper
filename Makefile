@@ -1,5 +1,5 @@
-CFLAGS= -Wall -Werror -ggdb3 -Wextra -std=gnu99  #debug
-#CFLAGS= -O3 #for release
+CFLAGS= -Wall -Werror -ggdb3 -Wextra -std=gnu99 -DDEBUG #debug
+#CFLAGS= -O3 -std=gnu99#for release
 LIBS= -lm
 NAME=tblcompile
 CC=gcc
@@ -8,13 +8,13 @@ SPLINTARGS= +posixstrictlib -retvalint
 HDRS= $(SRCS:.c=.h)
 OBJS= $(SRCS:.c=.o)
 
-all: tblcompile
+all: tblcompile TAGS
 
-tblcompile: tblcompile.c tblcompile.h xtrapbits.h
+tblcompile: tblcompile.c tblcompile.h xtrapbits.h printing.h
 	$(CC) $(CFLAGS) $(LIBS) -o $@ $<
 
-TAGS: tblcompile.c tblcompile.h xtrapbits.h
-	etags.emacs $?
+TAGS: tblcompile.c tblcompile.h xtrapbits.h printing.h
+	@-etags.emacs $?
 
 
 #utility targets
