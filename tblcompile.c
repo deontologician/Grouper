@@ -5,7 +5,7 @@ int main(int argc, char* argv[])
         /* Check for the proper number of arguments. Print usage if wrong
          * number */
         if (argc < 3){
-                Trace( 
+                Error( 
                         "Usage: %s <max memory> <policy file.pol> [<input file>]"
                         " [<output file>]\n", argv[0] );
                 exit(EXIT_FAILURE);
@@ -18,7 +18,7 @@ int main(int argc, char* argv[])
         FILE *pol_file = fopen(argv[2], "r");
         /* Exit if file fails to open */
         if (pol_file == NULL){
-                Trace( "Invalid policy file: \'%s\' \n", argv[2]);
+                Error( "Invalid policy file: \'%s\' \n", argv[2]);
                 exit(EXIT_FAILURE);
         }
 
@@ -27,7 +27,7 @@ int main(int argc, char* argv[])
                 FILE * in_temp = stdin;
                 stdin = fopen(argv[3], "r");
                 if(stdin == NULL){
-                        Trace("Input file '%s' is invalid or "
+                        Error("Input file '%s' is invalid or "
                                 "non-existent. Falling back to stdin.\n", 
                                 argv[3]);
                         stdin = in_temp;
@@ -39,7 +39,7 @@ int main(int argc, char* argv[])
                 FILE * out_temp = stdout;               
                 stdout = fopen(argv[4], "w");
                 if(stdout == NULL){
-                        Trace("Output file '%s' cannot be opened for "
+                        Error("Output file '%s' cannot be opened for "
                                 "writing. Falling back to stdout.\n", argv[4]);
                         stdout = out_temp;
                 }
@@ -52,7 +52,7 @@ int main(int argc, char* argv[])
         uint64_t t = min_tables(memsize_bits, pol.N , pol.b);
 
         if (t == TABLE_ERROR){
-                Trace("Error: not enough memory to build tables. "
+                Error("Error: not enough memory to build tables. "
                         "Needs at least %"PRIu64" bytes.\n",(2*pol.N*pol.b)/8);
                 exit(EXIT_FAILURE);
         }
@@ -91,10 +91,10 @@ int main(int argc, char* argv[])
                 
                 fill_tables(pol, d, even_tables, odd_tables);
 
-                Trace("Even tables: \n");
-                print_tables(d.even_h, d.even_d, d.bytewidth, even_tables);
-                Trace("Odd tables: \n");
-                print_tables(d.odd_h, d.odd_d, d.bytewidth, odd_tables);
+                /* Trace("Even tables: \n"); */
+                /* print_tables(d.even_h, d.even_d, d.bytewidth, even_tables); */
+                /* Trace("Odd tables: \n"); */
+                /* print_tables(d.odd_h, d.odd_d, d.bytewidth, odd_tables); */
 
                 /* Free intermittant resources */
                 array2d_free(pol.q_masks);

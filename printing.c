@@ -5,7 +5,9 @@
    -a-number-in-c  */
 void printbits(uint8_t byte)
 {
+#ifdef DEBUG
         for(int i = 8; i != 0; --i) putc('0' + ((byte >> (i-1)) & 1), stderr);
+#endif
 }
 
 /* Print out a bitmask table */
