@@ -10,12 +10,11 @@ OBJS= $(SRCS:.c=.o)
 
 all: tblcompile TAGS
 
-tblcompile: tblcompile.c tblcompile.h xtrapbits.h printing.h
-	$(CC) $(CFLAGS) $(LIBS) -o $@ $<
+tblcompile: tblcompile.c tblcompile.h xtrapbits.h printing.c printing.h
+	$(CC) $(CFLAGS) $(LIBS) -o $@ tblcompile.c printing.c
 
-TAGS: tblcompile.c tblcompile.h xtrapbits.h printing.h
+TAGS: tblcompile.c tblcompile.h xtrapbits.h printing.c printing.h
 	@-etags.emacs $?
-
 
 #utility targets
 clean:
