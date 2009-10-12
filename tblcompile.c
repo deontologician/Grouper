@@ -91,11 +91,6 @@ int main(int argc, char* argv[])
                 
                 fill_tables(pol, d, even_tables, odd_tables);
 
-                /* Trace("Even tables: \n"); */
-                /* print_tables(d.even_h, d.even_d, d.bytewidth, even_tables); */
-                /* Trace("Odd tables: \n"); */
-                /* print_tables(d.odd_h, d.odd_d, d.bytewidth, odd_tables); */
-
                 /* Free intermittant resources */
                 array2d_free(pol.q_masks);
                 array2d_free(pol.b_masks);
@@ -470,18 +465,16 @@ void read_input_and_classify(policy pol, table_dims dim,
                 for(uint64_t i = 0; i < pol.N; ++i){
                         if(BitValue(bit_total,i) == true){
                                 Print("%"PRIu64"\n",i+1);
-                                Trace("Packet %"PRIu64" (",packets_read);
-                                printbits(inpacket[0]);//, dim.bytewidth, 8);
-                                Trace(") matched rule %"PRIu64"\n",i+1);
+                                Trace("Packet %"PRIu64" ",packets_read);
+                                Trace(" matched rule %"PRIu64"\n",i+1);
                                 match = true;
                                 break;
                         }
                 }
                 if (!match) { 
                         Print("0\n");
-                        Trace("Packet %"PRIu64" (",packets_read);
-                        printbits(inpacket[0]); //, dim.bytewidth, 8);
-                        Trace(") matched rule 0\n");
+                        Trace("Packet %"PRIu64" ",packets_read);
+                        Trace(" matched rule 0\n");
                 }
         }
 

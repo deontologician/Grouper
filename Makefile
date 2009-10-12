@@ -1,5 +1,5 @@
 DEBUG_CFLAGS= -Wall -Werror -ggdb3 -Wextra -std=gnu99 -DDEBUG #debug
-CFLAGS= -O3 -std=gnu99 #for release
+CFLAGS= -O3 -std=gnu99 -march=opteron -pg
 LIBS= -lm
 NAME=tblcompile
 CC=gcc
@@ -8,7 +8,7 @@ SPLINTARGS= +posixstrictlib -retvalint
 HDRS= $(SRCS:.c=.h)
 OBJS= $(SRCS:.c=.o)
 
-all: debug TAGS
+all: release TAGS
 
 debug: tblcompile.c tblcompile.h xtrapbits.h printing.c printing.h
 	$(CC) $(DEBUG_CFLAGS) $(LIBS) -o tblcompile tblcompile.c printing.c
