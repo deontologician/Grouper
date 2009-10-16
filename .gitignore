@@ -8,3 +8,7 @@ old_code/*
 output.txt
 trace.txt
 TAGS
+*.dat
+*.out
+*.pol
+#*
