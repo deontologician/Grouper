@@ -1,20 +1,22 @@
-DEBUG_CFLAGS= -Wall -Werror -ggdb3 -Wextra -std=gnu99 -DDEBUG #debug
-CFLAGS= -O3 -std=gnu99 -march=opteron -pg
+CFLAGS = -std=gnu99
+DEBUG_CFLAGS= -ggdb3 -Wall -Wextra -Werror -DDEBUG #debug
+PROFILE_CFLAGS = -O3 -march=core2
+RELEASE_CFLAGS= -O3 -march=core2
 LIBS= -lm
+PROF_LIBS = -lprofiler -ltcmalloc
 NAME=tblcompile
-CC=gcc
-SRCS1=tblcompile.c	
-SPLINTARGS= +posixstrictlib -retvalint
-HDRS= $(SRCS:.c=.h)
-OBJS= $(SRCS:.c=.o)
+CC=gcc	
 
 all: release TAGS
 
+profile: tblcompile.c tblcompile.h xtrapbits.h printing.c printing.h
+	$(CC) $(CFLAGS) $(PROFILE_CFLAGS) $(LIBS) $(PROF_LIBS) -o tblcompile.profile tblcompile.c printing.c
+
 debug: tblcompile.c tblcompile.h xtrapbits.h printing.c printing.h
-	$(CC) $(DEBUG_CFLAGS) $(LIBS) -o tblcompile tblcompile.c printing.c
+	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) $(LIBS) -o tblcompile.debug tblcompile.c printing.c
 
 release: tblcompile.c tblcompile.h xtrapbits.h printing.c printing.h
-	$(CC) $(CFLAGS) $(LIBS) -o tblcompile tblcompile.c printing.c
+	$(CC) $(CFLAGS) $(RELEASE_CFLAGS) $(LIBS) -o tblcompile tblcompile.c printing.c
 
 TAGS: tblcompile.c tblcompile.h xtrapbits.h printing.c printing.h
 	@-etags.emacs $?
