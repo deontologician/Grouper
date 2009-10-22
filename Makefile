@@ -1,6 +1,6 @@
 CFLAGS = -std=gnu99
 DEBUG_CFLAGS= -ggdb3 -Wall -Wextra -Werror -DDEBUG #debug
-PROFILE_CFLAGS = -O3 -march=core2
+PROFILE_CFLAGS = -O3 -march=core2 -ggdb3
 RELEASE_CFLAGS= -O3 -march=core2
 LIBS= -lm
 PROF_LIBS = -lprofiler -ltcmalloc
