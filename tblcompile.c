@@ -264,7 +264,7 @@ uint8_t ** array2d_alloc(uint64_t height, uint64_t width)
 }
 
 /* Frees a 2d array that has been previously created by array2d_alloc */
-void array2d_free(uint8_t ** arr)
+void array2d_free(uint8_t ** arr) 
 {
         free(arr[0]);
         free(arr);
@@ -302,10 +302,9 @@ void fill_tables(policy pol,
                         
                         for(union64 h = {.num = 0}; h.num < dims.even_h; ++h.num) {
                                 uint8_t num_temp[e_array_Bwidth];
-                                memset(num_temp, 0, 
-                                       e_array_Bwidth*sizeof(uint8_t));
-
-                                copy_section(h.arr, num_temp,0,dims.even_s);
+                                memset(num_temp, 0, e_array_Bwidth*sizeof(uint8_t));
+                                memcpy(num_temp,h.arr,e_array_Bwidth);
+                                //copy_section(h.arr, num_temp,0,dims.even_s);
                                 /* Set the appropriate bit in the lookup table
                                  * to 1 or 0 depending on whether the rule
                                  * matches */
@@ -345,8 +344,8 @@ void fill_tables(policy pol,
                                 memset(num_temp, 0, o_array_Bwidth);
                                 /* Copy even_s bits of the number into the
                                  temporary matching variable*/
-                                copy_section(h.arr, num_temp,0,dims.odd_s);
-
+                                memcpy(num_temp, h.arr, o_array_Bwidth);
+                                //copy_section(h.arr, num_temp,0,dims.odd_s);
                                 /* Set the appropriate bit in the lookup table
                                  * to 1 or 0 depending on whether the rule
                                  * matches */
