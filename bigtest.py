@@ -2,9 +2,10 @@
 functions to help in building different kinds of tests"""
 
 from math import log
-from subprocess import Popen, PIPE
+from subprocess import Popen, PIPE, STDOUT
 from optparse import OptionParser
 from decimal import Decimal
+import decimal
 import sys
 import tempfile
 import os
@@ -48,7 +49,7 @@ def mem_levels(bitlength = 104, rules = 10000, max_space = 3500000000):
 
 def make_rule_file(bits, rules):
     """Create a random rule file with the number of bits and rules specified"""
-    with open('%dbx%drules.pol' % (bits,rules)) as rulefile:
+    with open('%dbx%drules.pol' % (bits,rules),'w') as rulefile:
         rulefile.write('%d\n' % ceil_div(bits, 8))
         for _ in xrange(rules):
             for _ in xrange(bits):
@@ -57,35 +58,57 @@ def make_rule_file(bits, rules):
             rulefile.write('\n')
         return rulefile.name
 
+executor = ""
+
 def test_table_amounts(bits = 104, rules = 10000, inputsize = 12,
                        benchfile = 'benchmarks.txt',
-                       program = './tblcompile.profile'):
+                       programname = './tblcompile.profile'):
+    """Run the tests for all relevant sizes of memory for the given
+    parameters"""
+
     # create the random rule file to the specifications
     rule_filename = make_rule_file(bits, rules)
+    print "Built %dx%d random rulefile" % (bits, rules)
+
     # create a random binary file of inputsize megabytes
     data_filename = '%dMBrandom.bin' % inputsize
     os.system('head --bytes=%d000000 /dev/urandom > %s' % 
               (inputsize, data_filename))
-    with open(benchfile, 'a') as resultfile:
+    print "Built random data file of size %dMB" % inputsize
+
+    with open(benchfile, 'w') as resultfile:
         for _, mem in mem_levels(bits, rules):
             # run the benchmark to determine what the table build time is for
             # the current memory size
-            buildbench = Popen(['/usr/bin/time','-f','"%U"', program,
-                                str(mem), '/dev/null/', '/dev/null'], 
-                               stdout=PIPE)
+            print "Benching table build time..."
+            buildbench = Popen('/usr/bin/time -f %%U %s %d %s %s %s' %
+                (programname, mem, rule_filename, os.devnull, os.devnull), 
+                               stderr=STDOUT, stdout=PIPE, shell=True)
             build_time = Decimal(buildbench.communicate()[0])
+
             #run the benchmark for the current memory size over the input
-            runbench = Popen(['/usr/bin/time','-f','"%U"', program,
-                              str(mem), rule_filename, data_filename],
-                             stdout = PIPE)
+            print "Benching processing time..."
+            runbench = Popen('/usr/bin/time  -f %%U %s %d %s %s %s' % 
+                              (programname, mem, rule_filename, data_filename,
+                               os.devnull), 
+                             stderr = STDOUT, stdout = PIPE, shell=True)
             run_time = Decimal(runbench.communicate()[0])
-            process_time = run_time - build_time 
+            
+            #calculate final values
+            decimal.getcontext().prec = 2
+            process_time = run_time - build_time
+            MBps = Decimal('%d000' % inputsize) / process_time
+            pps = (Decimal('%d000000' % inputsize) / Decimal(ceil_div(bits,8)))\
+                / process_time
   
-            #append current run info to the benchmark file
-            resultfile.write('%d bits, %d rules, %d Bytes for tables\n' +
-                             '%s - %s = %s\n\n' % (bits, rules, mem, 
-                             str(run_time), str(build_time), str(process_time)))
+            # append current run info to the benchmark file
+            result1 = '%d bits, %d rules, %d Bytes for tables\n' % (bits,rules,mem)
+            result2 = '\t%s - %s = %s = %s MBps and %s pps\n\n' %\
+                (str(run_time), str(build_time), str(process_time), 
+                 str(MBps), str(pps))
+            result = "".join([result1,result2])
+            print result
+            resultfile.write(result)
 
 if __name__ == '__main__':
-    parser = OptionParser()
-    
+    test_table_amounts()
