@@ -5,10 +5,8 @@ from math import log
 from subprocess import Popen, PIPE, STDOUT
 from optparse import OptionParser
 from decimal import Decimal
-import decimal
-import sys
-import tempfile
 import os
+import sys
 import random
 
 def ceil_div(num, denom):
@@ -61,6 +59,7 @@ def make_rule_file(bits, rules):
 executor = ""
 
 def test_table_amounts(bits = 104, rules = 10000, inputsize = 12,
+                       max_size = 3500000000,
                        benchfile = 'benchmarks.txt',
                        programname = './tblcompile.profile'):
     """Run the tests for all relevant sizes of memory for the given
@@ -77,7 +76,7 @@ def test_table_amounts(bits = 104, rules = 10000, inputsize = 12,
     print "Built random data file of size %dMB" % inputsize
 
     with open(benchfile, 'w') as resultfile:
-        for _, mem in mem_levels(bits, rules):
+        for _, mem in mem_levels(bits, rules, max_size):
             # run the benchmark to determine what the table build time is for
             # the current memory size
             print "Benching table build time..."
@@ -95,20 +94,39 @@ def test_table_amounts(bits = 104, rules = 10000, inputsize = 12,
             run_time = Decimal(runbench.communicate()[0])
             
             #calculate final values
-            decimal.getcontext().prec = 2
             process_time = run_time - build_time
-            MBps = Decimal('%d000' % inputsize) / process_time
+            KBps = Decimal('%d000' % inputsize) / process_time
             pps = (Decimal('%d000000' % inputsize) / Decimal(ceil_div(bits,8)))\
                 / process_time
   
             # append current run info to the benchmark file
             result1 = '%d bits, %d rules, %d Bytes for tables\n' % (bits,rules,mem)
-            result2 = '\t%s - %s = %s = %s MBps and %s pps\n\n' %\
+            result2 = '\t%s - %s = %s = %s KBps and %s pps\n\n' %\
                 (str(run_time), str(build_time), str(process_time), 
-                 str(MBps), str(pps))
+                 str(KBps.quantize(Decimal('.01'))),# need these to show
+                 str(pps.quantize(Decimal('.01')))) # less precision
             result = "".join([result1,result2])
             print result
             resultfile.write(result)
+        
 
 if __name__ == '__main__':
-    test_table_amounts()
+
+    parser = OptionParser()
+    parser.add_option('-o','--output',dest='outfile',default = 'benchmark.txt',
+                      help = 'File to write benchmark results to',)
+    parser.add_option('-b','--bits', type='int', dest='bits', default = 104,
+                      help = 'Number of relevant bits in a pattern')
+    parser.add_option('-r','--rules',type='int',dest='rules', default = 10000,
+                      help = 'Number of rules to generate')
+    parser.add_option('-p','--program',dest='programname', 
+                      default = './tblcompile.profile',
+                      help = 'Name of program to benchmark')
+    parser.add_option('-l','--mem-limit', dest='memlimit', type = 'int',
+                      default = 3500000000,
+                      help = 'Maximum memory allowed for tables')
+    (options, args) = parser.parse_args(sys.argv)
+
+    test_table_amounts(bits = options.bits, rules = options.rules, 
+                       max_size = options.memlimit, benchfile = options.outfile,
+                       programname = options.programname)
