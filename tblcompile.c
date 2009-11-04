@@ -299,7 +299,7 @@ void fill_tables(policy pol,
                 even_args[i].pol = &pol;
                 even_args[i].dims = &dims;
                 even_args[i].table_num = i;
-                even_args[i].tables = (uint8_t *) &even_tables;
+                even_args[i].tables = (uint8_t *) even_tables;
                 pthread_create(&even_threads[i], NULL, fill_even_table, 
                                (void *) &even_args[i]);
         }
@@ -309,7 +309,7 @@ void fill_tables(policy pol,
                 odd_args[i].pol = &pol;
                 odd_args[i].dims = &dims;
                 odd_args[i].table_num = i;
-                odd_args[i].tables = (uint8_t *) &odd_tables;
+                odd_args[i].tables = (uint8_t *) odd_tables;
                 
                 pthread_create(&odd_threads[i], NULL, fill_odd_table, 
                                (void *) &odd_args[i]);
@@ -335,7 +335,7 @@ void * fill_even_table(void * args)
                 ((thread_args*)args)->tables;
 
         /* Precalculate even array Byte width */
-        uint64_t e_array_Bwidth = ceil_div(dims->even_d,8);
+        uint64_t e_array_Bwidth = ceil_div(dims->even_d, 8);
 
         Trace("Generating even table %"PRIu64"\n",d);
         /* This next loop iterates to pol.n instead of dims.bitwidth
@@ -360,18 +360,17 @@ void * fill_even_table(void * args)
                         
                 for(union64 h = {.num = 0}; h.num < dims->even_h; ++h.num) {
                         uint8_t num_temp[e_array_Bwidth];
-                        memset(num_temp, 0, e_array_Bwidth*sizeof(uint8_t));
-                        memcpy(num_temp,h.arr,e_array_Bwidth);
-                        //copy_section(h.arr, num_temp,0,dims.even_s);
+                        memset(num_temp, 0, e_array_Bwidth * sizeof(uint8_t));
+                        memcpy(num_temp, h.arr, e_array_Bwidth);
                         /* Set the appropriate bit in the lookup table
                          * to 1 or 0 depending on whether the rule
                          * matches */
                         if(rule_matches(e_array_Bwidth,num_temp,q_temp,b_temp)){
-                                BitTrue(&(*even_tables)[h.num][d][0], w);
+                                BitTrue(&((*even_tables)[h.num][d][0]), w);
                         }
                 }
         }
-                
+        return NULL;
 }
 
 /* Function to fill a single odd table (called by fill_tables threads)  */
@@ -381,7 +380,7 @@ void * fill_odd_table(void * args)
         policy * pol = ((thread_args*)args)->pol;
         table_dims * dims = ((thread_args*)args)->dims;
         uint64_t d = ((thread_args*)args)->table_num;
-        uint8_t (* odd_tables)[dims->odd_h][dims->odd_d][dims->bytewidth] = 
+        uint8_t (* odd_tables)[dims->odd_h][dims->odd_d][dims->bytewidth] =
                 ((thread_args*)args)->tables;
         
         /* Precalculate odd array size */
@@ -416,11 +415,11 @@ void * fill_odd_table(void * args)
                          * to 1 or 0 depending on whether the rule
                          * matches */
                         if(rule_matches(o_array_Bwidth,num_temp,q_temp,b_temp)){
-                                BitTrue(&(*odd_tables)[h.num][d][0], w);
+                                BitTrue(&((*odd_tables)[h.num][d][0]), w);
                         }
                 }
         }
-        
+        return NULL;
 }
 
         

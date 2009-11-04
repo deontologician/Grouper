@@ -56,7 +56,7 @@ typedef struct {
         policy * pol;           /* pointer to policy */
         table_dims * dims;      /* pointer to table dimensions */
         uint64_t table_num;     /* which table this thread will be handling */
-        uint8_t * tables;       /* pointer to tables (even or odd) */
+        uint8_t * tables;      /* pointer to tables (even or odd) */
 } thread_args;
 
 /************************** Prototypes  *************************/
@@ -96,7 +96,7 @@ void * fill_odd_table(void * args);
 /* Test whether a given byte array matches the b_array after being
  * masked by the q_array */
 bool rule_matches( uint64_t size, uint8_t input[size],  
-                  const uint8_t q_mask[size], const uint8_t b_mask[size]);
+                   const uint8_t q_mask[size], const uint8_t b_mask[size]);
 
 /* Copies a section of a bit array to the beginning of another bit array */
 void copy_section(const uint8_t *src_array, uint8_t *dst_array, uint64_t startbit,
@@ -107,8 +107,8 @@ uint8_t ** create_single_table(policy pol);
 
 /* Filters incoming packets and classifies them to stdout */
 void read_input_and_classify(policy pol, table_dims dim, 
-     uint8_t even_tables[dim.even_h][dim.even_d][dim.bytewidth], 
-     uint8_t odd_tables[dim.odd_h][dim.odd_d][dim.bytewidth]);
+                             uint8_t even_tables[dim.even_h][dim.even_d][dim.bytewidth], 
+                             uint8_t odd_tables[dim.odd_h][dim.odd_d][dim.bytewidth]);
 
 /* AND two bit arrays together, the second argument is modified */
 void and_bitarray(const uint8_t *new, uint8_t *total, uint64_t size);

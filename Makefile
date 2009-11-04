@@ -1,8 +1,8 @@
 CFLAGS = -std=gnu99
-DEBUG_CFLAGS= -ggdb3 -Wall -Wextra -Werror -DDEBUG #debug
+DEBUG_CFLAGS= -ggdb3 -Wall -Wextra -DDEBUG #debug
 PROFILE_CFLAGS = -O3 -march=core2 -ggdb3
 RELEASE_CFLAGS= -O3 -march=core2
-LIBS= -lm
+LIBS= -lm -lpthread
 PROF_LIBS = -lprofiler -ltcmalloc
 NAME=tblcompile
 CC=gcc	
