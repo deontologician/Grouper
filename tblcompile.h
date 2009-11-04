@@ -9,6 +9,7 @@
 #include <math.h>               /* For log, ceil etc. */
 #include <stdio.h>
 #include <string.h>             
+#include <errno.h>
 #include "xtrapbits.h"          /* Bitshifting macros */
 #include "printing.h"           /* Bit printing */
 

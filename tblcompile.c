@@ -85,9 +85,19 @@ int main(int argc, char* argv[])
                 uint8_t (*even_tables)[d.even_d][d.bytewidth] =
                         calloc(d.even_h * d.even_d, 
                                sizeof(uint8_t[d.bytewidth]));
+                if(even_tables == NULL){
+                        Error("Could not allocate memory for even tables!"
+                              " errno = %d\n", errno);
+                        exit(EXIT_FAILURE);
+                }
                 uint8_t (*odd_tables) [d.odd_d] [d.bytewidth] = 
-                        calloc(d.odd_h  * d.odd_d,  
+                        calloc(d.odd_h  * d.odd_d, 
                                sizeof(uint8_t[d.bytewidth]));
+                if(odd_tables == NULL){
+                        Error("Could not allocate memory for odd tables!"
+                              " errno = %d\n", errno);
+                        exit(EXIT_FAILURE);
+                }
                 
                 fill_tables(pol, d, even_tables, odd_tables);
 
@@ -280,10 +290,13 @@ void fill_tables(policy pol,
         uint64_t e_array_Bwidth = (uint64_t) ceil(dims.even_s/8.0);
         
         for (uint64_t d = 0; d < dims.even_d; ++d){
+                Trace("Generating even table %"PRIu64"\n",d);
                 /* This next loop iterates to pol.n instead of dims.bitwidth
                  * because there are only n rules in pol.q_masks and
                  * pol.b_masks*/
                 for(uint64_t w = 0; w < pol.n; ++w){
+                        if(w == pol.n/3 || w == 2*pol.n/3 || w == pol.n -1){
+                                Trace("Generating column %"PRIu64"\n",w);}
                         /* Create a temporary array to copy the relevant q_mask
                          * bits into */
                         uint8_t q_temp[e_array_Bwidth];
@@ -320,10 +333,13 @@ void fill_tables(policy pol,
          * masks */
         uint64_t offset = dims.even_d * dims.even_s;
         for (uint64_t d = 0; d < dims.odd_d; ++d){
+                Trace("Generating odd table %"PRIu64"\n",d);
                 /* This next loop iterates to pol.n instead of dims.bitwidth
                  * because there are only n rules in pol.q_masks and
                  * pol.b_masks */
                 for(uint64_t w = 0; w < pol.n; ++w){
+                        if(w == pol.n/3 || w == 2*pol.n/3 || w == pol.n -1){
+                                Trace("Generating column %"PRIu64"\n",w);}
                         /* Create a temporary array to copy the relevant q_mask
                          * bits into */
                         uint8_t q_temp[o_array_Bwidth];
