@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <string.h>             
 #include <errno.h>
+#include <pthread.h>
 #include "xtrapbits.h"          /* Bitshifting macros */
 #include "printing.h"           /* Bit printing */
 
@@ -50,6 +51,14 @@ typedef struct {
         uint64_t odd_s;         /* Width of odd section */
 } table_dims;
 
+/* Structure to hold args for passing to a fill_table thread */
+typedef struct {
+        policy * pol;           /* pointer to policy */
+        table_dims * dims;      /* pointer to table dimensions */
+        uint64_t table_num;     /* which table this thread will be handling */
+        uint8_t * tables;       /* pointer to tables (even or odd) */
+} thread_args;
+
 /************************** Prototypes  *************************/
 
 /* Determine the minimum number of tables that will fit in a
@@ -78,6 +87,12 @@ void fill_tables(policy pol, table_dims dims,
                  uint8_t even_tables[dims.even_h][dims.even_d][dims.bytewidth],
                  uint8_t odd_tables[dims.odd_h][dims.odd_d][dims.bytewidth]);
 
+/* Function to fill a single even table (called by fill_tables threads) */
+void * fill_even_table(void * args);
+
+/* Function to fill a single odd table (called by fill_tables threads)*/
+void * fill_odd_table(void * args);
+
 /* Test whether a given byte array matches the b_array after being
  * masked by the q_array */
 bool rule_matches( uint64_t size, uint8_t input[size],  
@@ -98,14 +113,13 @@ void read_input_and_classify(policy pol, table_dims dim,
 /* AND two bit arrays together, the second argument is modified */
 void and_bitarray(const uint8_t *new, uint8_t *total, uint64_t size);
 
+/* Rounds up the result of integer division */
+uint64_t ceil_div(uint64_t num, uint64_t denom);
+
 /************************** Inline functions  *************************/
 
 /* easily find log2(r) */
 #define lg(r) (log((double) (r)) / log(2.0))
-
-/* Swap byte-order of a uint64_t. 
-   Adapted from gcc trunk gcc/libgcc2.c */
-uint64_t Bswap64(uint64_t u);
 
 /* Return index in packing order (msb in byte first) */
 #define PackingIndex(bit) ((((bit)/BitsInByte)*BitsInByte)  \

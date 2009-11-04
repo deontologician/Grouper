@@ -44,7 +44,7 @@ int main(int argc, char* argv[])
                         stdout = out_temp;
                 }
         }
-
+        
         policy pol = read_policy(pol_file);
         fclose(pol_file);
 
@@ -286,92 +286,143 @@ void fill_tables(policy pol,
                  uint8_t even_tables[dims.even_h][dims.even_d][dims.bytewidth],
                  uint8_t odd_tables [dims.odd_h][dims.odd_d][dims.bytewidth])
 {
-        /* Precalculate even array Byte width */
-        uint64_t e_array_Bwidth = (uint64_t) ceil(dims.even_s/8.0);
-        
-        for (uint64_t d = 0; d < dims.even_d; ++d){
-                Trace("Generating even table %"PRIu64"\n",d);
-                /* This next loop iterates to pol.n instead of dims.bitwidth
-                 * because there are only n rules in pol.q_masks and
-                 * pol.b_masks*/
-                for(uint64_t w = 0; w < pol.n; ++w){
-                        if(w == pol.n/3 || w == 2*pol.n/3 || w == pol.n -1){
-                                Trace("Generating column %"PRIu64"\n",w);}
-                        /* Create a temporary array to copy the relevant q_mask
-                         * bits into */
-                        uint8_t q_temp[e_array_Bwidth];
-                        memset(q_temp, 0, e_array_Bwidth); /* zero out */
-                        /* Copy the relevant bits into the temp array */
-                        copy_section(pol.q_masks[w], q_temp, d*dims.even_s, 
-                                     dims.even_s);
-                        /* Create a temporary array to copy the relevant b_mask
-                         * bits into */
-                        uint8_t b_temp[e_array_Bwidth];
-                        memset(b_temp, 0, e_array_Bwidth); /* zero out */
-                        
-                        /* Copy the relevant bits into the temp array */
-                        copy_section(pol.b_masks[w], b_temp, d*dims.even_s, 
-                                     dims.even_s);
-                        
-                        for(union64 h = {.num = 0}; h.num < dims.even_h; ++h.num) {
-                                uint8_t num_temp[e_array_Bwidth];
-                                memset(num_temp, 0, e_array_Bwidth*sizeof(uint8_t));
-                                memcpy(num_temp,h.arr,e_array_Bwidth);
-                                //copy_section(h.arr, num_temp,0,dims.even_s);
-                                /* Set the appropriate bit in the lookup table
-                                 * to 1 or 0 depending on whether the rule
-                                 * matches */
-                                if(rule_matches(e_array_Bwidth,num_temp,q_temp,b_temp)){
-                                        BitTrue(&even_tables[h.num][d][0], w);
-                                }
-                        }
-                }
-        }
-        /* Precalculate odd array size */
-        uint64_t o_array_Bwidth = (uint64_t) ceil(dims.odd_s/8.0);
-        /* Offset to get to the beginning of the odd sections of the b and q
-         * masks */
-        uint64_t offset = dims.even_d * dims.even_s;
-        for (uint64_t d = 0; d < dims.odd_d; ++d){
-                Trace("Generating odd table %"PRIu64"\n",d);
-                /* This next loop iterates to pol.n instead of dims.bitwidth
-                 * because there are only n rules in pol.q_masks and
-                 * pol.b_masks */
-                for(uint64_t w = 0; w < pol.n; ++w){
-                        if(w == pol.n/3 || w == 2*pol.n/3 || w == pol.n -1){
-                                Trace("Generating column %"PRIu64"\n",w);}
-                        /* Create a temporary array to copy the relevant q_mask
-                         * bits into */
-                        uint8_t q_temp[o_array_Bwidth];
-                        memset(q_temp, 0, o_array_Bwidth); /* zero out */
-                        /* Copy the relevant bits into the temp array */
-                        copy_section(pol.q_masks[w], q_temp,
-                                     offset + d*dims.odd_s, dims.odd_s);
+        /* Create an array for handling threads */
+        pthread_t even_threads[dims.even_d];
+        thread_args even_args[dims.even_d];
+        pthread_t odd_threads[dims.odd_d];
+        thread_args odd_args[dims.odd_d];
 
-                        /* Create a temporary array to copy the relevant b_mask
-                         * bits into */
-                        uint8_t b_temp[o_array_Bwidth];
-                        memset(b_temp, 0, o_array_Bwidth); /* zero out */
-                        /* Copy the relevant bits into the temp array */
-                        copy_section(pol.b_masks[w], b_temp, 
-                                     offset + d*dims.odd_s, dims.odd_s);
-                        for(union64 h = {.num = 0}; h.num < dims.odd_h; ++h.num){
-                                uint8_t num_temp[o_array_Bwidth];
-                                memset(num_temp, 0, o_array_Bwidth);
-                                /* Copy even_s bits of the number into the
-                                 temporary matching variable*/
-                                memcpy(num_temp, h.arr, o_array_Bwidth);
-                                //copy_section(h.arr, num_temp,0,dims.odd_s);
-                                /* Set the appropriate bit in the lookup table
-                                 * to 1 or 0 depending on whether the rule
-                                 * matches */
-                                if(rule_matches(o_array_Bwidth,num_temp,q_temp,b_temp)){
-                                        BitTrue(&odd_tables[h.num][d][0], w);
-                                }
-                        }
-                }
+        /* Initialize the threads */
+        for (uint64_t i = 0; i < dims.even_d; ++i){
+                /* We do some assigning to auto variables here because all
+                 * threads will be joined before this function returns. */
+                even_args[i].pol = &pol;
+                even_args[i].dims = &dims;
+                even_args[i].table_num = i;
+                even_args[i].tables = (uint8_t *) &even_tables;
+                pthread_create(&even_threads[i], NULL, fill_even_table, 
+                               (void *) &even_args[i]);
+        }
+        for (uint64_t i = 0; i < dims.odd_d; ++i){
+                /* We do some assigning to auto variables here because all
+                 * threads will be joined before this function returns. */
+                odd_args[i].pol = &pol;
+                odd_args[i].dims = &dims;
+                odd_args[i].table_num = i;
+                odd_args[i].tables = (uint8_t *) &odd_tables;
+                
+                pthread_create(&odd_threads[i], NULL, fill_odd_table, 
+                               (void *) &odd_args[i]);
+        }
+        /* join all even threads */
+        for(uint64_t i = 0; i < dims.even_d; ++i){
+                pthread_join(even_threads[i], NULL);
+        }
+        /* join all odd threads */
+        for(uint64_t i = 0; i < dims.odd_d; ++i){
+                pthread_join(odd_threads[i], NULL);
         }
 }
+
+/* Function to fill a single even table (called by fill_tables threads)  */
+void * fill_even_table(void * args)
+{
+        /* Unpack args from struct pointer */
+        policy * pol = ((thread_args*)args)->pol;
+        table_dims * dims = ((thread_args*)args)->dims;
+        uint64_t d = ((thread_args*)args)->table_num;
+        uint8_t (* even_tables)[dims->even_h][dims->even_d][dims->bytewidth] = 
+                ((thread_args*)args)->tables;
+
+        /* Precalculate even array Byte width */
+        uint64_t e_array_Bwidth = ceil_div(dims->even_d,8);
+
+        Trace("Generating even table %"PRIu64"\n",d);
+        /* This next loop iterates to pol.n instead of dims.bitwidth
+         * because there are only n rules in pol.q_masks and
+         * pol.b_masks*/
+        for(uint64_t w = 0; w < pol->n; ++w){
+                /* Create a temporary array to copy the relevant q_mask
+                 * bits into */
+                uint8_t q_temp[e_array_Bwidth];
+                memset(q_temp, 0, e_array_Bwidth); /* zero out */
+                /* Copy the relevant bits into the temp array */
+                copy_section(pol->q_masks[w], q_temp, d*dims->even_s, 
+                             dims->even_s);
+                /* Create a temporary array to copy the relevant b_mask
+                 * bits into */
+                uint8_t b_temp[e_array_Bwidth];
+                memset(b_temp, 0, e_array_Bwidth); /* zero out */
+                        
+                /* Copy the relevant bits into the temp array */
+                copy_section(pol->b_masks[w], b_temp, d*dims->even_s, 
+                             dims->even_s);
+                        
+                for(union64 h = {.num = 0}; h.num < dims->even_h; ++h.num) {
+                        uint8_t num_temp[e_array_Bwidth];
+                        memset(num_temp, 0, e_array_Bwidth*sizeof(uint8_t));
+                        memcpy(num_temp,h.arr,e_array_Bwidth);
+                        //copy_section(h.arr, num_temp,0,dims.even_s);
+                        /* Set the appropriate bit in the lookup table
+                         * to 1 or 0 depending on whether the rule
+                         * matches */
+                        if(rule_matches(e_array_Bwidth,num_temp,q_temp,b_temp)){
+                                BitTrue(&(*even_tables)[h.num][d][0], w);
+                        }
+                }
+        }
+                
+}
+
+/* Function to fill a single odd table (called by fill_tables threads)  */
+void * fill_odd_table(void * args)
+{
+        /* Unpack args from struct pointer */
+        policy * pol = ((thread_args*)args)->pol;
+        table_dims * dims = ((thread_args*)args)->dims;
+        uint64_t d = ((thread_args*)args)->table_num;
+        uint8_t (* odd_tables)[dims->odd_h][dims->odd_d][dims->bytewidth] = 
+                ((thread_args*)args)->tables;
+        
+        /* Precalculate odd array size */
+        uint64_t o_array_Bwidth = ceil_div(dims->odd_s, 8);
+        /* Offset to get to the beginning of the odd sections of the b and q
+         * masks */
+        uint64_t offset = dims->even_d * dims->even_s;
+        for(uint64_t w = 0; w < pol->n; ++w){
+                /* Create a temporary array to copy the relevant q_mask
+                 * bits into */
+                uint8_t q_temp[o_array_Bwidth];
+                memset(q_temp, 0, o_array_Bwidth); /* zero out */
+                /* Copy the relevant bits into the temp array */
+                copy_section(pol->q_masks[w], q_temp,
+                             offset + d*dims->odd_s, dims->odd_s);
+
+                /* Create a temporary array to copy the relevant b_mask
+                 * bits into */
+                uint8_t b_temp[o_array_Bwidth];
+                memset(b_temp, 0, o_array_Bwidth); /* zero out */
+                /* Copy the relevant bits into the temp array */
+                copy_section(pol->b_masks[w], b_temp, 
+                             offset + d*dims->odd_s, dims->odd_s);
+                for(union64 h = {.num = 0}; h.num < dims->odd_h; ++h.num){
+                        uint8_t num_temp[o_array_Bwidth];
+                        memset(num_temp, 0, o_array_Bwidth);
+                        /* Copy even_s bits of the number into the
+                           temporary matching variable*/
+                        memcpy(num_temp, h.arr, o_array_Bwidth);
+                        //copy_section(h.arr, num_temp,0,dims.odd_s);
+                        /* Set the appropriate bit in the lookup table
+                         * to 1 or 0 depending on whether the rule
+                         * matches */
+                        if(rule_matches(o_array_Bwidth,num_temp,q_temp,b_temp)){
+                                BitTrue(&(*odd_tables)[h.num][d][0], w);
+                        }
+                }
+        }
+        
+}
+
         
 /* test whether a given byte array matches the b_array after being
  * masked by the q_array  */
@@ -505,16 +556,8 @@ void and_bitarray(const uint8_t* new, uint8_t* total, uint64_t size)
         }
 }
 
-/* Swap byte-order of a uint64_t. 
-   Adapted from gcc trunk gcc/libgcc2.c */
-uint64_t Bswap64(uint64_t u)
+/* Rounds up the result of integer division */
+uint64_t ceil_div(uint64_t num, uint64_t denom)
 {
-        return ((((u) & 0xff00000000000000ull) >> 56)
-                | (((u) & 0x00ff000000000000ull) >> 40)
-                | (((u) & 0x0000ff0000000000ull) >> 24)
-                | (((u) & 0x000000ff00000000ull) >>  8)
-                | (((u) & 0x00000000ff000000ull) <<  8)
-                | (((u) & 0x0000000000ff0000ull) << 24)
-                | (((u) & 0x000000000000ff00ull) << 40)
-                | (((u) & 0x00000000000000ffull) << 56));
+        return (num + denom - 1) / denom;
 }
