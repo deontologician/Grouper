@@ -518,15 +518,15 @@ void read_input_and_classify(policy pol, table_dims dim,
                 /* Loop through the remaining even bit arrays and AND them with
                  * the total */
                 for(uint64_t i = 1; i < dim.even_d;++i){
-                        memcpy(tmp, &even_tables[even_index[i].num][i][0], pol.N/8);
-                        and_bitarray(tmp,bit_total, pol.N/8);
+                        and_bitarray(&even_tables[even_index[i].num][i][0], 
+                                     bit_total, pol.N/8);
                 }
 
                  /* Loop through the remaining odd bit arrays and AND them with
                  * the total */
                 for(uint64_t i = 0; i < dim.odd_d; ++i){
-                        memcpy(tmp, &odd_tables[odd_index[i].num][i][0], pol.N/8);
-                        and_bitarray(tmp, bit_total, pol.N/8);
+                        and_bitarray(&odd_tables[odd_index[i].num][i][0],
+                                     bit_total, pol.N/8);
                 }
                 /* Loop through and determine the first bit that is set, if none
                  * is set, we say rule 0 is matched. */
