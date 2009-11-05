@@ -332,6 +332,8 @@ void * fill_even_table(void * args)
         table_dims * dims = ((thread_args*)args)->dims;
         uint64_t d = ((thread_args*)args)->table_num;
         uint8_t (* even_tables)[dims->even_h][dims->even_d][dims->bytewidth] = 
+                /* Big ugly cast to eliminate pointer warnings */
+                (uint8_t (*) [dims->even_h][dims->even_d][dims->bytewidth])
                 ((thread_args*)args)->tables;
 
         /* Precalculate even array Byte width */
@@ -381,6 +383,8 @@ void * fill_odd_table(void * args)
         table_dims * dims = ((thread_args*)args)->dims;
         uint64_t d = ((thread_args*)args)->table_num;
         uint8_t (* odd_tables)[dims->odd_h][dims->odd_d][dims->bytewidth] =
+                /* Big ugly cast to eliminate pointer warnings */
+                (uint8_t (*) [dims->odd_h][dims->odd_d][dims->bytewidth])
                 ((thread_args*)args)->tables;
         
         /* Precalculate odd array size */
@@ -548,7 +552,7 @@ void read_input_and_classify(policy pol, table_dims dim,
 }
 
 /* AND two bit arrays together, the second argument holds the results */
-void and_bitarray(const uint8_t* new, uint8_t* total, uint64_t size)
+inline void and_bitarray(const uint8_t* new, uint8_t* total, uint64_t size)
 {
         for (uint64_t i = 0; i < size; ++i){
                 total[i] &= new[i];
@@ -556,7 +560,7 @@ void and_bitarray(const uint8_t* new, uint8_t* total, uint64_t size)
 }
 
 /* Rounds up the result of integer division */
-uint64_t ceil_div(uint64_t num, uint64_t denom)
+inline uint64_t ceil_div(uint64_t num, uint64_t denom)
 {
         return (num + denom - 1) / denom;
 }
