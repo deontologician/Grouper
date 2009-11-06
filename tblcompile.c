@@ -432,19 +432,8 @@ void * fill_odd_table(void * args)
 bool rule_matches( uint64_t size, uint8_t input[size], const uint8_t q_mask[size], 
                   const uint8_t b_mask[size])
 {
-        /* Make some larger arrays to make faster comparisons */
-        uint64_t word_size = size/8;
-        uint64_t (* input64)[word_size] = (uint64_t (*)[size/8]) input;
-        uint64_t (* q_mask64)[word_size] = (uint64_t (*)[size/8]) q_mask;
-        uint64_t (* b_mask64)[word_size] = (uint64_t (*)[size/8]) b_mask;
-        /* test for equality a word at a time */
-        for (uint64_t i = 0; i < word_size; ++i){
-                if(((*input64)[i] & (*q_mask64)[i]) != (*b_mask64)[i]){
-                        return false;
-                }
-        }
-        /* test the last part a byte at a time */
-        for(uint64_t i = 8 * word_size; i < size; ++i){
+        /* test for equality a byte at a time */
+        for (uint64_t i = 0; i < size; ++i){
                 if((input[i] & q_mask[i]) != b_mask[i]){
                         return false;
                 }
@@ -517,6 +506,8 @@ void read_input_and_classify(policy pol, table_dims dim,
 
                 /* create a running total to decide which rule is satisfied */
                 uint8_t bit_total[pol.N/8];
+                /* Zero out bit_total */
+                memset(bit_total, 0, pol.N/8);
                 /* Copy the first bit array into the total Note that we must
                  * have at least one even section, its the odd sections that may
                  * not exist. */
