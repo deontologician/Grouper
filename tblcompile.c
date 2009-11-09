@@ -111,8 +111,11 @@ int main(int argc, char* argv[])
                 read_input_and_classify(pol,d,even_tables,odd_tables);
                 
                 /* Release resources */
-                free(even_tables);
-                free(odd_tables);
+                /* These are commented out for the time being because they
+                 * artificially deflate throughput benchmarks and the memory
+                 * will be freed when the process closes anyway */
+                /* free(even_tables); */
+                /* free(odd_tables); */
         }
 
         return EXIT_SUCCESS;
@@ -512,8 +515,6 @@ void read_input_and_classify(policy pol, table_dims dim,
                  * have at least one even section, its the odd sections that may
                  * not exist. */
                 memcpy(bit_total, &even_tables[even_index[0].num][0][0], pol.N/8);
-                /* Create a temporary variable to AND with the total */
-                uint8_t tmp[pol.N/8]; 
 
                 /* Loop through the remaining even bit arrays and AND them with
                  * the total */
