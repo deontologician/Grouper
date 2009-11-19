@@ -1,13 +1,14 @@
 """This is to do a full benchmark on the packet filter as well as various
 functions to help in building different kinds of tests"""
 
-from math import log
+from math import log, ceil
 from subprocess import Popen, PIPE, STDOUT
 from optparse import OptionParser
 from decimal import Decimal
 import os
 import sys
 import random
+import csv
 
 def ceil_div(num, denom):
     """Returns the result of division by integers rounded up"""
@@ -56,58 +57,99 @@ def make_rule_file(bits, rules):
             rulefile.write('\n')
         return rulefile.name
 
-executor = ""
+def min_bytes(rules, bits):
+    "returns the minimum number of bytes needed for given rules and bits"
+    return 2*ceil_div(rules,8)*bits
 
-def test_table_amounts(bits = 104, rules = 10000, inputsize = 12,
-                       max_size = 3500000000,
-                       benchfile = 'benchmarks.txt',
-                       programname = './tblcompile.profile'):
-    """Run the tests for all relevant sizes of memory for the given
-    parameters"""
+def max_bytes(rules, bits):
+    "returns the max number of bytes needed for given rules and bits"
+    return 8 * int(log(rules,2)/8.0) * 2**bits
 
-    # create the random rule file to the specifications
-    rule_filename = make_rule_file(bits, rules)
-    print "Built %dx%d random rulefile" % (bits, rules)
+def min_tables(m, n, b):
+    N = 8 * ceil_div(n,8)
+    B = 8 * ceil_div(b,8)
+    high = ceil_div(b,2)
+    low = 1
+    while high - low > 1:
+        mid = (high + low) / 2
+        memForMid = (mid - (b % mid))*2**(b/mid)*n + \
+            (b %mid)*2**((b/mid) + 1)*n
+        if m < memForMid:
+            low = mid
+        else:
+            high = mid
+    return low,memForMid
+        
+def multi_d_test(mem_steps, rule_steps, bit_steps, programname = './tblcompile',
+                 data_filename = '10MBrandom.bin',
+                 test_filename = 'test_file.csv'):
+    """Do multi-dimensional test with the given steps"""
+    quant = Decimal('0.1') #number to round to when printing Decimal results
+    with open(test_filename,'w') as test_file:
+        writer = csv.writer(test_file)
+        writer.writerow(['memory','rules','bits','kbps','pps','"table build time"',
+                         '"table size"','"number of tables"'])
+        for bits in bit_steps:
+            for rules in rule_steps:
+                rule_filename = make_rule_file(bits, rules)
+                print "Working with %s now..." % rule_filename
+                for mem in mem_steps:
+                    print "%d bytes:" % mem
+                    if mem < min_bytes(rules, bits):
+                        print "Not enough memory for rules and bits given"
+                        writer.writerow([mem, rules, bits, '', '', '', '', ''])
+                        continue
+                    elif mem >= max_bytes(rules, bits):
+                        print "Needs only one table"
+                        writer.writerow([mem, rules, bits, 'redo','redo',
+                                         'redo','redo','redo'])
+                        continue
+                    print "Benching table build time..."
+                    runstring = '/usr/bin/time -f %%U %s %d %s %s %s'
+                    print runstring % (programname, mem, rule_filename, os.devnull,
+                                       os.devnull)
+                    buildbench = Popen( runstring %
+                                       (programname, mem, rule_filename,
+                                        os.devnull, os.devnull),
+                                       stderr=STDOUT, stdout=PIPE, shell=True)
+                    build_time = Decimal(buildbench.communicate()[0])
+                    
+                    #run the benchmark for the current memory size over the input
+                    print "Benching processing time..."
+                    print runstring % (programname, mem, rule_filename, data_filename,
+                                       os.devnull)
+                    runbench = Popen(runstring %
+                                     (programname, mem, rule_filename,
+                                      data_filename,os.devnull),
+                                     stderr = STDOUT, stdout = PIPE, shell=True)
+                    run_time = Decimal(runbench.communicate()[0])
+                    
+                    #calculate final values
+                    process_time = run_time - build_time
+                    Kbps = Decimal('9600000') / process_time
+                    pps = (Decimal('12000000') / Decimal(ceil_div(bits,8)))\
+                        / process_time
+  
+                    # append current run info to the benchmark file
+                    tables, memory_used = min_tables(mem, rules, bits)
+                    writer.writerow([mem, rules, bits, Kbps.quantize(quant),
+                                     pps.quantize(quant), build_time,
+                                     memory_used, tables])
+                #clean up rule file
+                os.remove(os.getcwd() + '/' + rule_filename)
 
+def build_test_input(inputsize = 12, data_filename="%dMBrandom.bin"):
+    """Generates a random data file
+
+    inputsize : size of random input in MB
+    data_filename : filename template to use, must include a %%d specifier
+    """
     # create a random binary file of inputsize megabytes
-    data_filename = '%dMBrandom.bin' % inputsize
+    data_filename = data_filename % inputsize
     os.system('head --bytes=%d000000 /dev/urandom > %s' % 
               (inputsize, data_filename))
     print "Built random data file of size %dMB" % inputsize
 
-    with open(benchfile, 'w') as resultfile:
-        for _, mem in mem_levels(bits, rules, max_size):
-            # run the benchmark to determine what the table build time is for
-            # the current memory size
-            print "Benching table build time..."
-            buildbench = Popen('/usr/bin/time -f %%U %s %d %s %s %s' %
-                (programname, mem, rule_filename, os.devnull, os.devnull), 
-                               stderr=STDOUT, stdout=PIPE, shell=True)
-            build_time = Decimal(buildbench.communicate()[0])
-
-            #run the benchmark for the current memory size over the input
-            print "Benching processing time..."
-            runbench = Popen('/usr/bin/time  -f %%U %s %d %s %s %s' % 
-                              (programname, mem, rule_filename, data_filename,
-                               os.devnull), 
-                             stderr = STDOUT, stdout = PIPE, shell=True)
-            run_time = Decimal(runbench.communicate()[0])
-            
-            #calculate final values
-            process_time = run_time - build_time
-            KBps = Decimal('%d000' % inputsize) / process_time
-            pps = (Decimal('%d000000' % inputsize) / Decimal(ceil_div(bits,8)))\
-                / process_time
-  
-            # append current run info to the benchmark file
-            result1 = '%d bits, %d rules, %d Bytes for tables\n' % (bits,rules,mem)
-            result2 = '\t%s - %s = %s = %s KBps and %s pps\n\n' %\
-                (str(run_time), str(build_time), str(process_time), 
-                 str(KBps.quantize(Decimal('.01'))),# need these to show
-                 str(pps.quantize(Decimal('.01')))) # less precision
-            result = "".join([result1,result2])
-            print result
-            resultfile.write(result)
         
 
 if __name__ == '__main__':
@@ -127,6 +169,19 @@ if __name__ == '__main__':
                       help = 'Maximum memory allowed for tables')
     (options, args) = parser.parse_args(sys.argv)
 
-    test_table_amounts(bits = options.bits, rules = options.rules, 
-                       max_size = options.memlimit, benchfile = options.outfile,
-                       programname = options.programname)
+    # mem_steps  = [1,1000,10000,
+    #               100000,500000,1000000,
+    #               10000000,100000000,500000000,
+    #               1000000000,1500000000,2000000000]
+    # rule_steps = [1, 10, 50,
+    #               100, 500, 1000,
+    #               5000, 10000, 50000,
+    #               100000, 500000, 1000000]
+    # bit_steps = [1, 10, 40, 
+    #              70, 100, 200, 
+    #              500, 1000, 1500,
+    #              2500, 5000]
+    mem_steps = [10,1000,10000,100000]
+    rule_steps = [10,100, 1000]
+    bit_steps = [10,100, 200]
+    multi_d_test(mem_steps, rule_steps, bit_steps)

@@ -53,7 +53,8 @@ int main(int argc, char* argv[])
 
         if (t == TABLE_ERROR){
                 Error("Error: not enough memory to build tables. "
-                        "Needs at least %"PRIu64" bytes.\n",(2*pol.N*pol.b)/8);
+                      "Needs at least %"PRIu64" bytes.\n",
+                      ceil_div((2*pol.N*pol.b),8));
                 exit(EXIT_FAILURE);
         }
 
@@ -61,7 +62,8 @@ int main(int argc, char* argv[])
                 " bits.\n",t, memsize_bits);
 
         /* Handle the special single table case */
-        if (t == 1){    
+        if (t == 1){ 
+                fprintf(stderr, "Error. one table needed...\n");
                 //uint8_t ** single_table = create_single_table(pol);
         }else{
                 /* Calculate heights and depths */
@@ -131,14 +133,20 @@ uint64_t min_tables(uint64_t m , uint64_t n , uint64_t b)
         /* Check to ensure n and b are positive, and that the max memory is
            large enough to hold the smallest tables for the number of rules
            specified. Return error if not. */
-        if(m < 2*n*b || n < 1 || b < 1) return TABLE_ERROR;
+        if(m < (128 * ceil_div(n,8) * ceil_div(b,8))
+           || n < 1 || b < 1) return TABLE_ERROR;
         /* If the amount of memory available is larger than the amount
            needed for a 1 table solution, return 1. 1 table is a special
            case because it allows only using lg(n) bits to store the rules */
-        if(m >= 8*ceil(ceil(lg(n))/8.0)*exp2(b)) return 1;
+        /* In addition, we need to check to make (reasonably) sure overflow
+         * isn't going to happen, so on the assumption that the log of the
+         * number of rules is 3 bytes or less, we won't allow bitlengths greater
+         * than 58 to be considered for the one table solution. */
+        if(b <= 58 && 
+           m >= 8*(uint64_t)ceil(lg(n)/8.0)*exp2(b) ) return 1;
 
         /* Initial highest number of tables that might be needed */
-        uint64_t high = (uint64_t) ceil(b/2.0);
+        uint64_t high = ceil_div(b,2);
         /* Initial lowest number of tables that might be needed  */
         uint64_t low = 1;
         /* Binary search through possible table numbers. */
@@ -162,7 +170,7 @@ policy read_policy(FILE * file)
         uint64_t curr_bits = 0;
         char tmp;
         size_t n = 80;
-        char* tmpstring = malloc(sizeof(char[n]));
+        char * tmpstring = malloc(sizeof(char[n]));
 
         /* Consume the first line */
         getline(&tmpstring, &n, file); 
@@ -211,8 +219,8 @@ policy read_policy(FILE * file)
         }
         
         /* We convert bits to bytes rounding up to the next byte */
-        pol.B = 8 * (uint64_t) ceil(pol.b/8.0);
-        pol.N = 8 * (uint64_t) ceil(pol.n/8.0);
+        pol.B = 8 * ceil_div(pol.b, 8);
+        pol.N = 8 * ceil_div(pol.n, 8);
 
         /* Allocate space for ? masks. */
         pol.q_masks = array2d_alloc(pol.n, pol.B/8);
