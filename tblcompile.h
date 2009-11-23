@@ -29,7 +29,8 @@ typedef struct {
         uint8_t ** q_masks; /* Masks representing ? in policy pattern */
         uint8_t ** b_masks; /* Masks representing 0,1 in policy pattern */
 } policy;
-#define POLICY_INIT {.pl = 0, .n = 0, .N = 0, .b = 0, .B = 0, .q_masks = NULL, .b_masks = NULL}
+#define POLICY_INIT {.pl = 0, .n = 0, .N = 0, .b = 0, .B = 0, \
+                        .q_masks = NULL, .b_masks = NULL}
 
 /* Union to convert between uint64_t and uint8_t[8] */
 typedef union UNION64 union64;
@@ -103,7 +104,7 @@ void copy_section(const uint8_t *src_array, uint8_t *dst_array, uint64_t startbi
                   uint64_t size);
 
 /* Creates a single table for rule matching */
-uint8_t ** create_single_table(policy pol);
+uint8_t * create_single_table(policy pol,uint64_t width);
 
 /* Filters incoming packets and classifies them to stdout */
 void read_input_and_classify(policy pol, table_dims dim, 
@@ -117,9 +118,6 @@ void and_bitarray(const uint8_t *new, uint8_t *total, uint64_t size);
 uint64_t ceil_div(uint64_t num, uint64_t denom);
 
 /************************** Inline functions  *************************/
-
-/* easily find log2(r) */
-#define lg(r) (log((double) (r)) / log(2.0))
 
 /* Return index in packing order (msb in byte first) */
 #define PackingIndex(bit) ((((bit)/BitsInByte)*BitsInByte)  \

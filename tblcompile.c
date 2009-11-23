@@ -62,9 +62,14 @@ int main(int argc, char* argv[])
                 " bits.\n",t, memsize_bits);
 
         /* Handle the special single table case */
-        if (t == 1){ 
-                fprintf(stderr, "Error. one table needed...\n");
-                //uint8_t ** single_table = create_single_table(pol);
+        if (t == 1){
+                /* Find the width of the binary representation of the number of
+                 * rules in bytes  */
+                uint64_t width = ceil_div(ceil(log2(pol.n)), 8);
+                uint8_t (*single_table)[width];
+                single_table = (uint8_t (*)[width]) create_single_table(pol, width);
+                
+                
         }else{
                 /* Calculate heights and depths */
                 table_dims d = {
@@ -137,13 +142,13 @@ uint64_t min_tables(uint64_t m , uint64_t n , uint64_t b)
            || n < 1 || b < 1) return TABLE_ERROR;
         /* If the amount of memory available is larger than the amount
            needed for a 1 table solution, return 1. 1 table is a special
-           case because it allows only using lg(n) bits to store the rules */
+           case because it allows only using log2(n) bits to store the rules */
         /* In addition, we need to check to make (reasonably) sure overflow
          * isn't going to happen, so on the assumption that the log of the
          * number of rules is 3 bytes or less, we won't allow bitlengths greater
          * than 58 to be considered for the one table solution. */
         if(b <= 58 && 
-           m >= 8*(uint64_t)ceil(lg(n)/8.0)*exp2(b) ) return 1;
+           m >= 8*(uint64_t)ceil(log2(n)/8.0)*exp2(b) ) return 1;
 
         /* Initial highest number of tables that might be needed */
         uint64_t high = ceil_div(b,2);
@@ -466,18 +471,47 @@ void copy_section(const uint8_t * src_array, uint8_t * dst_array,
 } 
         
 /* Creates a single table for rule matching */
-/* uint8_t ** create_single_table(policy pol) */
-/* { */
-/*         uint64_t height = (uint64_t) exp2(pol.b); */
-/*         uint64_t width  = 8 * (uint64_t) ceil(ceil(lg(pol.n)) / 8.0); */
-/*         uint8_t (*table)[width] = calloc(height, width); */
-        
-/*         for(uint64_t i = 0; i < height; ++i){ */
-                
-/*                 /\* TODO: complete this code *\/ */
-
-/*         } */
-/* } */
+uint8_t * create_single_table(policy pol, uint64_t width)
+{
+        uint64_t height = (uint64_t) exp2(pol.b);
+        uint8_t (*table)[width] = calloc(height, width);
+        /* temps to copy mask info into */
+        union64 q_temp = {.num = 0};
+        union64 b_temp = {.num = 0};
+        /* For each possible input bitarray*/
+        for(uint64_t i = 0; i < height; ++i){
+                /* Check each rule to see which is the first match */
+                for(union64 j = {.num = 0}; j.num < pol.n; j.num++){
+                        /* Copy the relevant bytes into the temp variables for
+                         * comparison. Note that these temps do not need to be
+                         * zeroed each time they are used since width is
+                         * constant for each run of the program */
+                        for(uint64_t k = 0;k < width; k++){
+                                q_temp.arr[width - k - 1] = pol.q_masks[j.num][k];
+                                b_temp.arr[width - k - 1] = pol.b_masks[j.num][k];
+                        }
+                        Trace("q_temp: ");
+                        print_mem(q_temp.arr,8,8);
+                        Trace("\nb_temp: ");
+                        print_mem(b_temp.arr,8,8);
+                        if((i & q_temp.num) != b_temp.num){
+                                Trace("Input %"PRIu64" (",i);
+                                for(uint64_t k = 0; k < width; k++){
+                                        printbits(j.arr[k]);
+                                        Trace(" ");
+                                }
+                                Trace(") matches rule %"PRIu64"\n",j.num);
+                                /* Set the table row equal to the rule number
+                                 * that matched */
+                                for(uint64_t k = 0; k < width; k++){
+                                        table[i][k] = j.arr[k];
+                                }
+                                break;
+                        }
+                }
+        }
+        return (uint8_t*) table;
+}
 
 /* Filters incoming packets and classifies them to stdout */
 void read_input_and_classify(policy pol, table_dims dim, 

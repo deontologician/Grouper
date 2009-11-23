@@ -24,8 +24,8 @@
 #define Print(...) fprintf(stdout,__VA_ARGS__) 
 
 /* Prototypes */
-void __print_tables(uint64_t h, uint64_t d, uint64_t w, uint8_t tables[h][d][w]);
+void __print_tables(uint64_t h, uint64_t d, uint64_t w, const uint8_t tables[h][d][w]);
 void __printbits(uint8_t byte);
-void __print_mem(uint8_t * start, uint64_t size, uint64_t cols);
-void __print_masks(uint8_t ** q_masks, uint64_t height, uint64_t width);
+void __print_mem(const uint8_t * start, uint64_t size, uint64_t cols);
+void __print_masks(const uint8_t ** q_masks, uint64_t height, uint64_t width);
 
