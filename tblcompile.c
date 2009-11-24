@@ -49,7 +49,7 @@ int main(int argc, char* argv[])
         fclose(pol_file);
 
         /* Calculate number of tables required.  */
-        uint64_t t = min_tables(memsize_bits, pol.N , pol.b);
+        uint64_t t = min_tables(memsize_bits, pol.n , pol.b);
 
         if (t == TABLE_ERROR){
                 Error("Error: not enough memory to build tables. "
@@ -135,20 +135,27 @@ int main(int argc, char* argv[])
    b is the number of relevant pattern bits*/
 uint64_t min_tables(uint64_t m , uint64_t n , uint64_t b)
 {
+        /* Note: all values represent a number of bits in this function, the
+         * caller will convert to necessary bytes etc */
+
         /* Check to ensure n and b are positive, and that the max memory is
            large enough to hold the smallest tables for the number of rules
            specified. Return error if not. */
-        if(m < (128 * ceil_div(n,8) * ceil_div(b,8))
+        uint64_t N = 8 * ceil_div(n, 8); // n rounded to the next multiple of 8
+        if(m < 2 * N * b 
            || n < 1 || b < 1) return TABLE_ERROR;
+
         /* If the amount of memory available is larger than the amount
-           needed for a 1 table solution, return 1. 1 table is a special
-           case because it allows only using log2(n) bits to store the rules */
-        /* In addition, we need to check to make (reasonably) sure overflow
-         * isn't going to happen, so on the assumption that the log of the
-         * number of rules is 3 bytes or less, we won't allow bitlengths greater
-         * than 58 to be considered for the one table solution. */
+         * needed for a 1 table solution, return 1. 1 table is a special
+         * case because it allows only using log2(n) bits to store the rules 
+         *
+         * In addition, we need to check to make (reasonably) sure overflow
+         * isn't going to happen (when we convert a double to a uint64_t), so on
+         * the assumption that the log of the number of rules is 3 bytes or
+         * less, we won't allow bitlengths greater than 58 to be considered for
+         * the one table solution. */
         if(b <= 58 && 
-           m >= 8*(uint64_t)ceil(log2(n)/8.0)*exp2(b) ) return 1;
+           m >= (8 * ceil_div((uint64_t)log2(n),8)) * exp2(b) ) return 1;
 
         /* Initial highest number of tables that might be needed */
         uint64_t high = ceil_div(b,2);
@@ -158,14 +165,15 @@ uint64_t min_tables(uint64_t m , uint64_t n , uint64_t b)
         while((high - low) > 1) {
                 uint64_t mid = (high + low)/2;
                 uint64_t memNeededForMidTables = 
-                        (mid - (b % mid))*exp2(b/mid)*n + 
-                        (b%mid)*exp2((b/mid) + 1)*n;                                  
-                if(m < memNeededForMidTables)
+                        (mid - (b % mid))*exp2(b/mid) * N + 
+                        (b%mid)*exp2((b/mid) + 1) * N;                                
+                if(m < memNeededForMidTables){
                         low = mid;
-                else 
+                }else{ 
                         high = mid;
+                }
         }
-        return low;
+        return high;
 }
 
 /* reads in a policy from a file and creates the relevant patterns in memory */
@@ -479,7 +487,7 @@ uint8_t * create_single_table(policy pol, uint64_t width)
         union64 q_temp = {.num = 0};
         union64 b_temp = {.num = 0};
         /* For each possible input bitarray*/
-        for(uint64_t i = 0; i < height; ++i){
+        for(union64 i = {.num = 0}; i.num < height; i.num++){
                 /* Check each rule to see which is the first match */
                 for(union64 j = {.num = 0}; j.num < pol.n; j.num++){
                         /* Copy the relevant bytes into the temp variables for
@@ -487,27 +495,35 @@ uint8_t * create_single_table(policy pol, uint64_t width)
                          * zeroed each time they are used since width is
                          * constant for each run of the program */
                         for(uint64_t k = 0;k < width; k++){
-                                q_temp.arr[width - k - 1] = pol.q_masks[j.num][k];
-                                b_temp.arr[width - k - 1] = pol.b_masks[j.num][k];
+                                q_temp.arr[k] = pol.q_masks[j.num][k];
+                                b_temp.arr[k] = pol.b_masks[j.num][k];
                         }
-                        Trace("q_temp: ");
-                        print_mem(q_temp.arr,8,8);
-                        Trace("\nb_temp: ");
-                        print_mem(b_temp.arr,8,8);
-                        if((i & q_temp.num) != b_temp.num){
-                                Trace("Input %"PRIu64" (",i);
-                                for(uint64_t k = 0; k < width; k++){
-                                        printbits(j.arr[k]);
+                        //Trace("q_temp: ");
+                        //print_mem(q_temp.arr,8,8);
+                        //Trace("b_temp: ");
+                        //print_mem(b_temp.arr,8,8);
+                        if((i.num & q_temp.num) != b_temp.num){
+                                Trace("Input %"PRIu64" (",i.num);
+                                for(uint64_t k = pol.B/8; k != 0; k--){
+                                        printbits(i.arr[k-1]);
                                         Trace(" ");
                                 }
-                                Trace(") matches rule %"PRIu64"\n",j.num);
+                                Trace(") matches rule %"PRIu64"\n",j.num + 1);
                                 /* Set the table row equal to the rule number
                                  * that matched */
                                 for(uint64_t k = 0; k < width; k++){
-                                        table[i][k] = j.arr[k];
+                                        /* Need to increment j by one when
+                                         * storing rule (rule 0 is always no
+                                         * match) */
+                                        table[i.num][k] = 
+                                                ((union64)(j.num + 1)).arr[k];
                                 }
                                 break;
                         }
+                        /* A convenient property here is that if the loop to
+                         * match rules falls through without finding a match, it
+                         * automatically matches rule 0, since the memory for
+                         * the table was calloc'd  */
                 }
         }
         return (uint8_t*) table;

@@ -63,22 +63,23 @@ def min_bytes(rules, bits):
 
 def max_bytes(rules, bits):
     "returns the max number of bytes needed for given rules and bits"
-    return 8 * int(log(rules,2)/8.0) * 2**bits
+    return ceil_div(int(log(rules,2)),8) * 2**bits
 
 def min_tables(m, n, b):
-    N = 8 * ceil_div(n,8)
-    B = 8 * ceil_div(b,8)
+    """Returns the minimum tables needed for a policy of n rules and b bits
+    given m bytes of memory to work with """
+    N = ceil_div(n,8) # number of bytes needed to contain n rules
     high = ceil_div(b,2)
     low = 1
     while high - low > 1:
         mid = (high + low) / 2
-        memForMid = (mid - (b % mid))*2**(b/mid)*n + \
-            (b %mid)*2**((b/mid) + 1)*n
+        memForMid = (mid - (b % mid))*2**(b/mid)*N + \
+            (b %mid)*2**((b/mid) + 1)*N
         if m < memForMid:
             low = mid
         else:
             high = mid
-    return low,memForMid
+    return high, memForMid
         
 def multi_d_test(mem_steps, rule_steps, bit_steps, programname = './tblcompile',
                  data_filename = '10MBrandom.bin',
@@ -104,8 +105,10 @@ def multi_d_test(mem_steps, rule_steps, bit_steps, programname = './tblcompile',
                         writer.writerow([mem, rules, bits, 'redo','redo',
                                          'redo','redo','redo'])
                         continue
+                    print "Should take %d tables and %d bytes" % \
+                        min_tables(mem,rules,bits)
                     print "Benching table build time..."
-                    runstring = '/usr/bin/time -f %%U %s %d %s %s %s'
+                    runstring = "/usr/bin/time -f '%%U' %s %d %s %s %s"
                     print runstring % (programname, mem, rule_filename, os.devnull,
                                        os.devnull)
                     buildbench = Popen( runstring %
@@ -181,7 +184,7 @@ if __name__ == '__main__':
     #              70, 100, 200, 
     #              500, 1000, 1500,
     #              2500, 5000]
-    mem_steps = [10,1000,10000,100000]
+    mem_steps = [10,100,1000,10000,100000]
     rule_steps = [10,100, 1000]
     bit_steps = [10,100, 200]
     multi_d_test(mem_steps, rule_steps, bit_steps)
