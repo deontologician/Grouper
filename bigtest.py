@@ -88,11 +88,17 @@ def multi_d_test(mem_steps, rule_steps, bit_steps, programname = './tblcompile',
     quant = Decimal('0.1') #number to round to when printing Decimal results
     with open(test_filename,'w') as test_file:
         writer = csv.writer(test_file)
-        writer.writerow(['memory','rules','bits','kbps','pps','"table build time"',
-                         '"table size"','"number of tables"'])
+        writer.writerow(['memory','rules','bits','kbps','pps','table build time',
+                         'table size','number of tables'])
         for bits in bit_steps:
             for rules in rule_steps:
-                rule_filename = make_rule_file(bits, rules)
+                if bits * rules > 1000000000:
+                    print "Rule file will be too large to be practical"
+                    for mem in mem_steps:
+                        writer.writerow([mem,rules,bits,'','','','',''])
+                    continue
+                else:
+                    rule_filename = make_rule_file(bits, rules)
                 print "Working with %s now..." % rule_filename
                 for mem in mem_steps:
                     print "%d bytes:" % mem
@@ -172,19 +178,19 @@ if __name__ == '__main__':
                       help = 'Maximum memory allowed for tables')
     (options, args) = parser.parse_args(sys.argv)
 
-    # mem_steps  = [1,1000,10000,
-    #               100000,500000,1000000,
-    #               10000000,100000000,500000000,
-    #               1000000000,1500000000,2000000000]
-    # rule_steps = [1, 10, 50,
-    #               100, 500, 1000,
-    #               5000, 10000, 50000,
-    #               100000, 500000, 1000000]
-    # bit_steps = [1, 10, 40, 
-    #              70, 100, 200, 
-    #              500, 1000, 1500,
-    #              2500, 5000]
-    mem_steps = [10,100,1000,10000,100000]
-    rule_steps = [10,100, 1000]
-    bit_steps = [10,100, 200]
+    mem_steps  = [1,1000,10000,
+                  100000,500000,1000000,
+                  10000000,100000000,500000000,
+                  1000000000,1500000000,2000000000]
+    rule_steps = [1, 10, 50,
+                  100, 500, 1000,
+                  5000, 10000, 50000,
+                  100000, 500000, 1000000]
+    bit_steps = [1, 10, 40, 
+                 70, 100, 200, 
+                 500, 1000, 1500,
+                 2500, 5000]
+    # mem_steps = [10,100,1000,10000,100000]
+    # rule_steps = [10,100, 1000]
+    # bit_steps = [10,100, 200]
     multi_d_test(mem_steps, rule_steps, bit_steps)
