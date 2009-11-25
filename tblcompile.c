@@ -546,8 +546,8 @@ void read_input_and_classify(policy pol, table_dims dim,
                 union64 even_index[dim.even_d];
                 union64 odd_index[dim.odd_d];
                 /* Zero out index arrays */
-                memset(even_index, 0, dim.even_d*sizeof(union64));
-                memset(odd_index, 0, dim.odd_d*sizeof(union64));
+                memset(even_index, 0, dim.even_d * sizeof(union64));
+                memset(odd_index, 0, dim.odd_d * sizeof(union64));
                 
                 /* Copy in sections of inpacket to even_index array*/
                 for (uint64_t i = 0; i < dim.even_d; ++i){
@@ -593,16 +593,16 @@ void read_input_and_classify(policy pol, table_dims dim,
                 for(uint64_t i = 0; i < pol.N; ++i){
                         if(BitValue(bit_total,i) == true){
                                 Print("%"PRIu64"\n",i+1);
-                                Trace("Packet %"PRIu64" ",packets_read);
-                                Trace(" matched rule %"PRIu64"\n",i+1);
+                                //Trace("Packet %"PRIu64" ",packets_read);
+                                //Trace(" matched rule %"PRIu64"\n",i+1);
                                 match = true;
                                 break;
                         }
                 }
                 if (!match) { 
                         Print("0\n");
-                        Trace("Packet %"PRIu64" ",packets_read);
-                        Trace(" matched rule 0\n");
+                        //Trace("Packet %"PRIu64" ",packets_read);
+                        //Trace(" matched rule 0\n");
                 }
         }
 

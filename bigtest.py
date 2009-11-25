@@ -57,6 +57,12 @@ def make_rule_file(bits, rules):
             rulefile.write('\n')
         return rulefile.name
 
+def make_data_file(MB = 10):
+    """Create a random data file"""
+    filename = "%dMBrandom.bin" % MB
+    os.system("head --bytes=%d000000 /dev/urandom > %s" % (MB, filename))
+    return filename
+
 def min_bytes(rules, bits):
     "returns the minimum number of bytes needed for given rules and bits"
     return 2*ceil_div(rules,8)*bits
@@ -81,18 +87,21 @@ def min_tables(m, n, b):
             high = mid
     return high, memForMid
         
-def multi_d_test(mem_steps, rule_steps, bit_steps, programname = './tblcompile',
-                 data_filename = '10MBrandom.bin',
+def multi_d_test(mem_steps, rule_steps, bit_steps, 
+                 programname = './tblcompile',
+                 data_size = 10,
                  test_filename = 'test_file.csv'):
     """Do multi-dimensional test with the given steps"""
-    quant = Decimal('0.1') #number to round to when printing Decimal results
+    quant = Decimal('1') #number to round to when printing Decimal results
+    # make a new data file if necessary
+    data_filename = make_rule_file(data_size) if data_size != 10 else '10MBrandom.bin'
     with open(test_filename,'w') as test_file:
         writer = csv.writer(test_file)
         writer.writerow(['memory','rules','bits','kbps','pps','table build time',
                          'table size','number of tables'])
         for bits in bit_steps:
             for rules in rule_steps:
-                if bits * rules > 1000000000:
+                if bits * rules > 1000000000: # max is 1GB
                     print "Rule file will be too large to be practical"
                     for mem in mem_steps:
                         writer.writerow([mem,rules,bits,'','','','',''])
@@ -103,20 +112,21 @@ def multi_d_test(mem_steps, rule_steps, bit_steps, programname = './tblcompile',
                 for mem in mem_steps:
                     print "%d bytes:" % mem
                     if mem < min_bytes(rules, bits):
-                        print "Not enough memory for rules and bits given"
+                        print "\tNot enough memory for rules and bits given"
                         writer.writerow([mem, rules, bits, '', '', '', '', ''])
                         continue
                     elif mem >= max_bytes(rules, bits):
-                        print "Needs only one table"
+                        print "\tNeeds only one table"
                         writer.writerow([mem, rules, bits, 'redo','redo',
                                          'redo','redo','redo'])
                         continue
-                    print "Should take %d tables and %d bytes" % \
+                    print "\tShould take %d tables and %d bytes" % \
                         min_tables(mem,rules,bits)
-                    print "Benching table build time..."
+                    print "\tBenching table build time..."
                     runstring = "/usr/bin/time -f '%%U' %s %d %s %s %s"
-                    print runstring % (programname, mem, rule_filename, os.devnull,
-                                       os.devnull)
+                    print "\t", runstring % \
+                        (programname, mem, rule_filename, os.devnull,
+                         os.devnull)
                     buildbench = Popen( runstring %
                                        (programname, mem, rule_filename,
                                         os.devnull, os.devnull),
@@ -124,9 +134,10 @@ def multi_d_test(mem_steps, rule_steps, bit_steps, programname = './tblcompile',
                     build_time = Decimal(buildbench.communicate()[0])
                     
                     #run the benchmark for the current memory size over the input
-                    print "Benching processing time..."
-                    print runstring % (programname, mem, rule_filename, data_filename,
-                                       os.devnull)
+                    print "\tBenching processing time..."
+                    print "\t", runstring % \
+                        (programname, mem, rule_filename, data_filename,
+                         os.devnull)
                     runbench = Popen(runstring %
                                      (programname, mem, rule_filename,
                                       data_filename,os.devnull),
@@ -135,9 +146,11 @@ def multi_d_test(mem_steps, rule_steps, bit_steps, programname = './tblcompile',
                     
                     #calculate final values
                     process_time = run_time - build_time
-                    Kbps = Decimal('9600000') / process_time
-                    pps = (Decimal('12000000') / Decimal(ceil_div(bits,8)))\
-                        / process_time
+                    # intermediate value needed to calculate kbps & pps
+                    data_bits = Decimal(data_size * 1000000 * 8)
+                    
+                    Kbps = ( data_bits / 1000 ) / process_time
+                    pps  = ( data_bits / bits ) / process_time
   
                     # append current run info to the benchmark file
                     tables, memory_used = min_tables(mem, rules, bits)
@@ -145,7 +158,7 @@ def multi_d_test(mem_steps, rule_steps, bit_steps, programname = './tblcompile',
                                      pps.quantize(quant), build_time,
                                      memory_used, tables])
                 #clean up rule file
-                os.remove(os.getcwd() + '/' + rule_filename)
+                os.remove(rule_filename)
 
 def build_test_input(inputsize = 12, data_filename="%dMBrandom.bin"):
     """Generates a random data file
@@ -164,33 +177,35 @@ def build_test_input(inputsize = 12, data_filename="%dMBrandom.bin"):
 if __name__ == '__main__':
 
     parser = OptionParser()
-    parser.add_option('-o','--output',dest='outfile',default = 'benchmark.txt',
+    parser.add_option('-o','--output',dest='outfile',default = 'test_file.csv',
                       help = 'File to write benchmark results to',)
     parser.add_option('-b','--bits', type='int', dest='bits', default = 104,
                       help = 'Number of relevant bits in a pattern')
     parser.add_option('-r','--rules',type='int',dest='rules', default = 10000,
                       help = 'Number of rules to generate')
     parser.add_option('-p','--program',dest='programname', 
-                      default = './tblcompile.profile',
+                      default = './tblcompile',
                       help = 'Name of program to benchmark')
     parser.add_option('-l','--mem-limit', dest='memlimit', type = 'int',
                       default = 3500000000,
                       help = 'Maximum memory allowed for tables')
     (options, args) = parser.parse_args(sys.argv)
 
-    mem_steps  = [1,1000,10000,
-                  100000,500000,1000000,
-                  10000000,100000000,500000000,
-                  1000000000,1500000000,2000000000]
-    rule_steps = [1, 10, 50,
-                  100, 500, 1000,
-                  5000, 10000, 50000,
-                  100000, 500000, 1000000]
-    bit_steps = [1, 10, 40, 
-                 70, 100, 200, 
-                 500, 1000, 1500,
-                 2500, 5000]
-    # mem_steps = [10,100,1000,10000,100000]
-    # rule_steps = [10,100, 1000]
-    # bit_steps = [10,100, 200]
-    multi_d_test(mem_steps, rule_steps, bit_steps)
+    # mem_steps  = [1,1000,10000,
+    #               100000,500000,1000000,
+    #               10000000,100000000,500000000,
+    #               1000000000,1500000000,2000000000]
+    # rule_steps = [1, 10, 50,
+    #               100, 500, 1000,
+    #               5000, 10000, 50000,
+    #               100000, 500000, 1000000]
+    # bit_steps = [1, 10, 40, 
+    #              70, 100, 200, 
+    #              500, 1000, 1500,
+    #              2500, 5000]
+    mem_steps = [10,100,1000,10000,100000,1000000]
+    rule_steps = [10,100, 1000, 5000, 10000]
+    bit_steps = [10,100, 200]
+    multi_d_test(mem_steps, rule_steps, bit_steps, data_size=10,
+                 test_filename = options.outfile,
+                 programname = options.programname)
