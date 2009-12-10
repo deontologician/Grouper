@@ -11,6 +11,7 @@
 #include <string.h>             
 #include <errno.h>
 #include <pthread.h>
+#include <sys/time.h>
 #include "xtrapbits.h"          /* Bitshifting macros */
 #include "printing.h"           /* Bit printing */
 
@@ -59,6 +60,8 @@ typedef struct {
         uint64_t table_num;     /* which table this thread will be handling */
         uint8_t * tables;      /* pointer to tables (even or odd) */
 } thread_args;
+
+typedef struct timeval profile_t; /* redefine to indicate purpose */
 
 /************************** Prototypes  *************************/
 
@@ -116,6 +119,12 @@ void and_bitarray(const uint8_t *new, uint8_t *total, uint64_t size);
 
 /* Rounds up the result of integer division */
 uint64_t ceil_div(uint64_t num, uint64_t denom);
+
+/* Starts timing a section of code */
+void start_timing(profile_t * time);
+
+/* Finishes timing a section of code and returns microseconds elapsed */
+long end_timing(profile_t * time);
 
 /************************** Inline functions  *************************/
 
