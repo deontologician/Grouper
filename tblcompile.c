@@ -2,6 +2,10 @@
 
 int main(int argc, char* argv[])
 {
+        profile_t outer_time, inner_time;
+        long total_time, read_time, build_time, process_time;
+        start_timing(&outer_time);
+        
         /* Check for the proper number of arguments. Print usage if wrong
          * number */
         if (argc < 3){
@@ -45,8 +49,11 @@ int main(int argc, char* argv[])
                 }
         }
         
+        start_timing(&inner_time);
         policy pol = read_policy(pol_file);
         fclose(pol_file);
+        read_time = end_timing(&inner_time);
+        Trace("Took %ld microseconds to finish reading the input file.\n", read_time);
 
         /* Calculate number of tables required.  */
         uint64_t t = min_tables(memsize_bits, pol.n , pol.b);
@@ -67,7 +74,18 @@ int main(int argc, char* argv[])
                  * rules in bytes  */
                 uint64_t width = ceil_div(ceil(log2(pol.n)), 8);
                 uint8_t (*single_table)[width];
+                start_timing(&inner_time);
                 single_table = (uint8_t (*)[width]) create_single_table(pol, width);
+
+                build_time = end_timing(&inner_time);
+                Trace("Took %ld microseconds to finish building single table\n",
+                      build_time);
+
+                start_timing(&inner_time);
+                /* Process packets with single table here */
+                process_time = end_timing(&inner_time);
+                Trace("Took %ld microseconds to finish processing with single table\n"
+                        , process_time);
                 
                 
         }else{
@@ -106,6 +124,7 @@ int main(int argc, char* argv[])
                         exit(EXIT_FAILURE);
                 }
                 
+                start_timing(&inner_time);
                 fill_tables(pol, d, even_tables, odd_tables);
 
                 /* Free intermittant resources */
@@ -113,17 +132,31 @@ int main(int argc, char* argv[])
                 array2d_free(pol.b_masks);
                 pol.q_masks = NULL;
                 pol.b_masks = NULL;
-
-                /* Read input and classify it until EOF */
-                read_input_and_classify(pol,d,even_tables,odd_tables);
                 
-                /* Release resources */
-                /* These are commented out for the time being because they
-                 * artificially deflate throughput benchmarks and the memory
-                 * will be freed when the process closes anyway */
-                /* free(even_tables); */
-                /* free(odd_tables); */
+                long build_time = end_timing(&inner_time);
+                Trace("Took %ld microseconds to finish building tables.\n",build_time);
+
+                /* Read input and classify input until EOF */
+                start_timing(&inner_time);
+                read_input_and_classify(pol,d,even_tables,odd_tables);
+                long process_time = end_timing(&inner_time);
+                Trace("Took %ld microseconds to finish processing packets\n",
+                        process_time);
+                
+                
+                /* Release resources: */
+                free(even_tables);
+                free(odd_tables);
+                
         }
+        
+        total_time = end_timing(&outer_time);
+        Trace("Took %ld microseconds total\n", total_time);
+        /* We print the next line unconditionally for external tools to do
+         * record keeping */
+        fprintf(stderr, "{ 'read' : %ld, 'build' : %ld, 'process' : %ld,"
+                " 'total' : %ld }\n", read_time, build_time, 
+                process_time, total_time);
 
         return EXIT_SUCCESS;
 }
@@ -622,4 +655,23 @@ inline void and_bitarray(const uint8_t* new, uint8_t* total, uint64_t size)
 inline uint64_t ceil_div(uint64_t num, uint64_t denom)
 {
         return (num + denom - 1) / denom;
+}
+
+/* Starts timing a section of code */
+void start_timing(profile_t * time)
+{
+        gettimeofday(time, NULL);
+}
+
+/* Ends timing a section of code and returns the number of microseconds elapsed */
+long end_timing(profile_t * time)
+{
+        long mtime, seconds, useconds;
+        struct timeval end_time;
+        gettimeofday(&end_time, NULL);
+        
+        seconds = end_time.tv_sec - time->tv_sec;
+        useconds = end_time.tv_usec - time->tv_usec;
+        mtime = seconds * 1000000 + useconds;
+        return mtime;
 }
