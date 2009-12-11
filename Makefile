@@ -7,7 +7,7 @@ PROF_LIBS = -lprofiler
 NAME=tblcompile
 CC=gcc
 
-all: release profile debug TAGS
+all: release profile debug makerules TAGS
 
 profile: tblcompile.profile
 tblcompile.profile: tblcompile.c tblcompile.h xtrapbits.h printing.c printing.h
@@ -23,6 +23,9 @@ release: tblcompile
 tblcompile: tblcompile.c tblcompile.h xtrapbits.h printing.c printing.h
 	@echo Making release...
 	$(CC) $(CFLAGS) $(RELEASE_CFLAGS) $(LIBS) -o tblcompile tblcompile.c printing.c
+
+makerules: makerules.c
+	$(CC) $(CFLAGS) $(RELEASE_CFLAGS) makerules.c -o makerules
 
 TAGS: tblcompile.c tblcompile.h xtrapbits.h printing.c printing.h
 	@-etags.emacs $?
