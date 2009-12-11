@@ -133,13 +133,13 @@ int main(int argc, char* argv[])
                 pol.q_masks = NULL;
                 pol.b_masks = NULL;
                 
-                long build_time = end_timing(&inner_time);
+                build_time = end_timing(&inner_time);
                 Trace("Took %ld microseconds to finish building tables.\n",build_time);
 
                 /* Read input and classify input until EOF */
                 start_timing(&inner_time);
                 read_input_and_classify(pol,d,even_tables,odd_tables);
-                long process_time = end_timing(&inner_time);
+                process_time = end_timing(&inner_time);
                 Trace("Took %ld microseconds to finish processing packets\n",
                         process_time);
                 
