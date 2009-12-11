@@ -29,6 +29,7 @@ int main(int argc, char ** argv)
         srand(seed.tv_sec * seed.tv_usec);
         
         FILE * outfile = fopen(filename, "w");
+        fprintf(outfile, "%d\n", bits);
         int i,j;
         int random_rule;
         for(i = 0; i < rules; i ++){
