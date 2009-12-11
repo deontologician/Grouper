@@ -3,6 +3,7 @@ filter
 tblcompile
 tblcompile.debug
 tblcompile.profile
+makerules
 .emacs*
 *.gch
 TAGS
