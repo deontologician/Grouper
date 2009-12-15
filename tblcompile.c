@@ -199,7 +199,7 @@ uint64_t min_tables(uint64_t m , uint64_t n , uint64_t b)
         uint64_t memNeededForMidTables = 0;
         uint64_t mid = 0;
         /* Binary search through possible table numbers. */
-        while((high - low) > 0) {
+        while((high - low) > 1) {
                 mid = (high + low)/2;
                 memNeededForMidTables = 
                         (mid - (b % mid))*exp2(b/mid) * N + 

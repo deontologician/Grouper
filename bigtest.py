@@ -73,22 +73,29 @@ def max_bytes(rules, bits):
     "returns the max number of bytes needed for given rules and bits"
     return ceil_div(int(log(rules,2)),8) * 2**bits
 
+def table_mem(t, n, b):
+    N = ceil_div(n,8)
+    return (t - (b % t))*(2**(b//t))*N + \
+        (b % t)*(2**((b//t) + 1))*N
+
 def min_tables(m, n, b):
     """Returns the minimum tables needed for a policy of n rules and b bits
     given m bytes of memory to work with """
     N = ceil_div(n,8) # number of bytes needed to contain n rules
     high = ceil_div(b,2)
     low = 1
-    while high - low > 0:
+    while high - low > 1:
+        print high,"-",low,"> 1"
         mid = (high + low) / 2
-        memForMid = (mid - (b % mid))*(2**(b//mid))*N + \
-            (b %mid)*(2**((b//mid) + 1))*N
+        memForMid = table_mem(mid,n,b)
         if m < memForMid:
+            print "low(",low,") = mid(",mid,")"
             low = mid
         else:
+            print "low(",high,") = mid(",mid,")"
             high = mid
     
-    return high, memForMid
+    return high, table_mem(high,n,b)
         
 def multi_d_test(mem_steps, rule_steps, bit_steps, 
                  programname = './tblcompile',
@@ -118,7 +125,7 @@ def multi_d_test(mem_steps, rule_steps, bit_steps,
                 print "Working with %s now..." % rule_filename
                 print "All-steps =",all_steps
                 if all_steps: mem_steps = mem_levels(bits,rules,2000000000)
-                for mem in mem_steps:
+                for _,mem in mem_steps:
                     print "%d bytes:" % mem
                     if mem < min_bytes(rules, bits):
                         print "\tNot enough memory for rules and bits given"
@@ -226,14 +233,10 @@ if __name__ == '__main__':
     #              2500, 5000]
 
     # 104 tests
-    # bit_steps = [104]
-    # rule_steps = [10**3,10**4,10**5,10**6]
-    # mem_steps = None
+    bit_steps = [104]
+    rule_steps = [10**3,10**4,10**5,10**6]
+    mem_steps = None
 
-    #min_tables tests
-    bit_steps = [40]
-    rule_steps = [50]
-    mem_steps = [10000000,100000000]
     multi_d_test(mem_steps, rule_steps, bit_steps, data_size=10,
                  test_filename = options.outfile,
                  programname = options.programname)
