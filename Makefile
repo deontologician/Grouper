@@ -34,6 +34,9 @@ TAGS: tblcompile.c tblcompile.h xtrapbits.h printing.c printing.h
 clean:
 	@-rm *~ *.o $(NAME) 2> /dev/null
 
+bench:
+	python bigtest.py
+
 #hack to get flymake mode to work with emacs 23
 .FLYMAKE-HACK: check-syntax
 check-syntax:

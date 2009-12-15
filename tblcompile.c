@@ -3,7 +3,8 @@
 int main(int argc, char* argv[])
 {
         profile_t outer_time, inner_time;
-        long total_time, read_time, build_time, process_time;
+        long total_time, read_time, build_time;
+        clock_t process_time;   /* We measure processing time in CPU seconds */
         start_timing(&outer_time);
         
         /* Check for the proper number of arguments. Print usage if wrong
@@ -82,10 +83,11 @@ int main(int argc, char* argv[])
                       build_time);
 
                 start_timing(&inner_time);
+                process_time = clock();
                 /* Process packets with single table here */
-                process_time = end_timing(&inner_time);
-                Trace("Took %ld microseconds to finish processing with single table\n"
-                        , process_time);
+                process_time = clock() - process_time;
+                Trace("Took %ld microseconds to finish processing with single table\n",
+                        process_time);
                 
                 
         }else{
@@ -137,12 +139,11 @@ int main(int argc, char* argv[])
                 Trace("Took %ld microseconds to finish building tables.\n",build_time);
 
                 /* Read input and classify input until EOF */
-                start_timing(&inner_time);
+                process_time = clock();
                 read_input_and_classify(pol,d,even_tables,odd_tables);
-                process_time = end_timing(&inner_time);
+                process_time = clock() - process_time;
                 Trace("Took %ld microseconds to finish processing packets\n",
                         process_time);
-                
                 
                 /* Release resources: */
                 free(even_tables);
@@ -194,12 +195,15 @@ uint64_t min_tables(uint64_t m , uint64_t n , uint64_t b)
         uint64_t high = ceil_div(b,2);
         /* Initial lowest number of tables that might be needed  */
         uint64_t low = 1;
+        /* variables used in calculation */
+        uint64_t memNeededForMidTables = 0;
+        uint64_t mid = 0;
         /* Binary search through possible table numbers. */
-        while((high - low) > 1) {
-                uint64_t mid = (high + low)/2;
-                uint64_t memNeededForMidTables = 
+        while((high - low) > 0) {
+                mid = (high + low)/2;
+                memNeededForMidTables = 
                         (mid - (b % mid))*exp2(b/mid) * N + 
-                        (b%mid)*exp2((b/mid) + 1) * N;                                
+                        (b%mid)*exp2((b/mid) + 1) * N;
                 if(m < memNeededForMidTables){
                         low = mid;
                 }else{ 
