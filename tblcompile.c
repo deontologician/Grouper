@@ -348,7 +348,7 @@ void fill_tables(policy pol,
                  uint8_t odd_tables [dims.odd_h][dims.odd_d][dims.bytewidth])
 {
         /* Determine number of threads to spawn based on the number of
-         * cores. EXTRA_THREADS is defined to give a slight buffer since
+         * cores. THREADS_PER_CORE is defined to give a slight buffer since
          * constantly stopping to join all open threads incurs some overhead,
          * and this may be more overhead than simply allowing a few extra
          * threads to context switch a bit. */
@@ -361,7 +361,8 @@ void fill_tables(policy pol,
         thread_args odd_args[dims.odd_d];
 
         /* These two variables keep track of the minimum index at which there
-         * could be an open thread in both the even and odd thread arrays */
+         * could be an open thread in the thread arrays (in other words we have
+         * joined all threads at lower indices) */
         uint64_t min_even_thread = 0;
         uint64_t min_odd_thread = 0;
 
@@ -482,7 +483,8 @@ void * fill_odd_table(void * args)
                 /* Big ugly cast to eliminate pointer warnings */
                 (uint8_t (*) [dims->odd_h][dims->odd_d][dims->bytewidth])
                 ((thread_args*)args)->tables;
-        
+
+        Trace("Generating odd table %"PRIu64"\n", d);
         /* Precalculate odd array size */
         uint64_t o_array_Bwidth = ceil_div(dims->odd_s, 8);
         /* Offset to get to the beginning of the odd sections of the b and q
