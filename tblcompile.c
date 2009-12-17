@@ -348,11 +348,11 @@ void fill_tables(policy pol,
                  uint8_t odd_tables [dims.odd_h][dims.odd_d][dims.bytewidth])
 {
         /* Determine number of threads to spawn based on the number of
-         * cores. THREADS_PER_CORE is defined to give a slight buffer since
-         * constantly stopping to join all open threads incurs some overhead,
-         * and this may be more overhead than simply allowing a few extra
-         * threads to context switch a bit. */
-        const uint64_t max_threads = sysconf(_SC_NPROCESSORS_ONLN) * THREADS_PER_CORE;
+         * cores. Empirically, (albeit with limited testing) it seems that
+         * having threads per core be about half of the total number of tables
+         * generates the best build time overall. */
+        const uint64_t max_threads = sysconf(_SC_NPROCESSORS_ONLN) * 
+                min(MIN_THREADS_PER_CORE, ceil_div(dims.even_d + dims.odd_d, 2));
         uint64_t active_threads = 0; /* How many unjoined threads exist */
         /* Create an array for handling threads */
         pthread_t even_threads[dims.even_d];
