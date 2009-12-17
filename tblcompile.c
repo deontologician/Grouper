@@ -347,14 +347,33 @@ void fill_tables(policy pol,
                  uint8_t even_tables[dims.even_h][dims.even_d][dims.bytewidth],
                  uint8_t odd_tables [dims.odd_h][dims.odd_d][dims.bytewidth])
 {
+        /* Determine number of threads to spawn based on the number of
+         * cores. EXTRA_THREADS is defined to give a slight buffer since
+         * constantly stopping to join all open threads incurs some overhead,
+         * and this may be more overhead than simply allowing a few extra
+         * threads to context switch a bit. */
+        const uint64_t max_threads = sysconf(_SC_NPROCESSORS_ONLN) * THREADS_PER_CORE;
+        uint64_t active_threads = 0; /* How many unjoined threads exist */
         /* Create an array for handling threads */
         pthread_t even_threads[dims.even_d];
         thread_args even_args[dims.even_d];
         pthread_t odd_threads[dims.odd_d];
         thread_args odd_args[dims.odd_d];
 
+        /* These two variables keep track of the minimum index at which there
+         * could be an open thread in both the even and odd thread arrays */
+        uint64_t min_even_thread = 0;
+        uint64_t min_odd_thread = 0;
+
         /* Initialize the threads */
         for (uint64_t i = 0; i < dims.even_d; ++i){
+                if(active_threads == max_threads){
+                        /* We've hit the maximum number of active threads so we
+                         * need to join some before continuing */
+                        for(;min_even_thread<i; min_even_thread++, active_threads--){
+                                pthread_join(even_threads[min_even_thread], NULL);
+                        }
+                }
                 /* We do some assigning to auto variables here because all
                  * threads will be joined before this function returns. */
                 even_args[i].pol = &pol;
@@ -363,8 +382,22 @@ void fill_tables(policy pol,
                 even_args[i].tables = (uint8_t *) even_tables;
                 pthread_create(&even_threads[i], NULL, fill_even_table, 
                                (void *) &even_args[i]);
+                active_threads++;
         }
         for (uint64_t i = 0; i < dims.odd_d; ++i){
+                if(active_threads == max_threads){
+                        /* We've hit the maximum number of active threads so we
+                         * need to join some before continuing */
+                        /* First join any even threads */
+                        for(; min_even_thread < dims.even_d;
+                            min_even_thread++, active_threads--){
+                                pthread_join(even_threads[min_even_thread], NULL);
+                        }
+                        /* Then join any odd threads */
+                        for(;min_odd_thread<i;min_odd_thread++, active_threads--){
+                                pthread_join(odd_threads[min_odd_thread], NULL);
+                        }
+                }
                 /* We do some assigning to auto variables here because all
                  * threads will be joined before this function returns. */
                 odd_args[i].pol = &pol;
@@ -374,15 +407,17 @@ void fill_tables(policy pol,
                 
                 pthread_create(&odd_threads[i], NULL, fill_odd_table, 
                                (void *) &odd_args[i]);
+                active_threads++;
         }
-        /* join all even threads */
-        for(uint64_t i = 0; i < dims.even_d; ++i){
+        /* join all remaining even threads */
+        for(uint64_t i = min_even_thread; i < dims.even_d; i++, active_threads--){
                 pthread_join(even_threads[i], NULL);
         }
-        /* join all odd threads */
-        for(uint64_t i = 0; i < dims.odd_d; ++i){
+        /* join all remaining odd threads */
+        for(uint64_t i = min_odd_thread; i < dims.odd_d; i++, active_threads--){
                 pthread_join(odd_threads[i], NULL);
         }
+        
 }
 
 /* Function to fill a single even table (called by fill_tables threads)  */

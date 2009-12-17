@@ -7,18 +7,20 @@
 #include <stdbool.h>            /* Adds true/false */
 #include <inttypes.h>           /* For format specifiers for uint* types */
 #include <math.h>               /* For log, ceil etc. */
-#include <stdio.h>
-#include <string.h>             
-#include <errno.h>
-#include <pthread.h>
-#include <sys/time.h>
+#include <stdio.h>              /* For standard functions */
+#include <string.h>             /* For string functions  */
+#include <errno.h>              /* For global variable errno */
+#include <pthread.h>            /* For threads */
+#include <sys/time.h>           /* For clock() and gettimeofday()*/
+#include <unistd.h>             /* For sysconf() to find # of cores */
 #include "xtrapbits.h"          /* Bitshifting macros */
 #include "printing.h"           /* Bit printing */
 
 /************************** Definitions  *************************/
 #define TABLE_ERROR 0 /* Defined for invalid return value of getMinNumberOfTables */
-#define SUCCESS 1;
-#define FAILURE 0;
+#define SUCCESS 1
+#define FAILURE 0
+#define THREADS_PER_CORE 2      /* number of threads to use per core */
 
 typedef struct {
         uint64_t pl;        /* Packet length */
