@@ -81,18 +81,14 @@ def table_mem(t, n, b):
 def min_tables(m, n, b):
     """Returns the minimum tables needed for a policy of n rules and b bits
     given m bytes of memory to work with """
-    N = ceil_div(n,8) # number of bytes needed to contain n rules
     high = ceil_div(b,2)
     low = 1
     while high - low > 1:
-        print high,"-",low,"> 1"
         mid = (high + low) / 2
         memForMid = table_mem(mid,n,b)
         if m < memForMid:
-            print "low(",low,") = mid(",mid,")"
             low = mid
         else:
-            print "low(",high,") = mid(",mid,")"
             high = mid
     
     return high, table_mem(high,n,b)
