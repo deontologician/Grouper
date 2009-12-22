@@ -685,7 +685,7 @@ void read_input_and_classify(policy pol, table_dims dim,
 }
 
 /* AND two bit arrays together, the second argument holds the results */
-inline void and_bitarray(const uint8_t* new, uint8_t* total, uint64_t size)
+static inline void and_bitarray(const uint8_t* new, uint8_t* total, uint64_t size)
 {
         for (uint64_t i = 0; i < size; ++i){
                 total[i] &= new[i];
@@ -693,19 +693,19 @@ inline void and_bitarray(const uint8_t* new, uint8_t* total, uint64_t size)
 }
 
 /* Rounds up the result of integer division */
-inline uint64_t ceil_div(uint64_t num, uint64_t denom)
+static inline uint64_t ceil_div(uint64_t num, uint64_t denom)
 {
         return (num + denom - 1) / denom;
 }
 
 /* Starts timing a section of code */
-void start_timing(profile_t * time)
+static inline void start_timing(profile_t * time)
 {
         gettimeofday(time, NULL);
 }
 
 /* Ends timing a section of code and returns the number of microseconds elapsed */
-long end_timing(profile_t * time)
+static inline long end_timing(profile_t * time)
 {
         long mtime, seconds, useconds;
         struct timeval end_time;
