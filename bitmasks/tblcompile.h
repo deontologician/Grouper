@@ -119,16 +119,16 @@ void read_input_and_classify(policy pol, table_dims dim,
                              uint8_t odd_tables[dim.odd_h][dim.odd_d][dim.bytewidth]);
 
 /* AND two bit arrays together, the second argument is modified */
-void and_bitarray(const uint8_t *new, uint8_t *total, uint64_t size);
+static inline void and_bitarray(const uint8_t *new, uint8_t *total, uint64_t size);
 
 /* Rounds up the result of integer division */
-uint64_t ceil_div(uint64_t num, uint64_t denom);
+static inline uint64_t ceil_div(uint64_t num, uint64_t denom);
 
 /* Starts timing a section of code */
-void start_timing(profile_t * time);
+static inline void start_timing(profile_t * time);
 
 /* Finishes timing a section of code and returns microseconds elapsed */
-long end_timing(profile_t * time);
+static inline long end_timing(profile_t * time);
 
 /************************** Inline functions  *************************/
 

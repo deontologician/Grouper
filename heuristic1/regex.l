@@ -1,6 +1,12 @@
 %option yylineno
 
 %{
+
+typedef YYTOKENTYPE enum {
+        LCARET, RCARET, LBRACKET, RBRACKET, LPAREN, RPAREN, EQUAL, ALTERNATE,
+        REPEAT, CONJUNCT, DASH, COLON, NEWLINE, MASKBITS, NAT, ENDOFFILE
+};
+
 %}
 
 %%

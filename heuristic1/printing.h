@@ -20,7 +20,7 @@
  #define print_tables(...) 
 #endif
 
-#define Error(...) fprintf(stderr,__VA_ARGS__)
+#define Error(...) fprintf(stderr,__VA_ARGS__);
 #define Print(...) fprintf(stdout,__VA_ARGS__) 
 
 /* Prototypes */

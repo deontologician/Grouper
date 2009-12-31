@@ -2,6 +2,7 @@
         #include <stdio.h>
         #include "printing.h"
         #include "lex.yy.c"
+        #define YYDEBUG 0
         
         void yyerror(const char *str) 
         {
@@ -18,7 +19,7 @@
 %%
 
  /* The entire policy file */
-polfile : NAT pollist
+polfile : NAT pollist {return 0;}
         ;
 
 /* The list of policies */
@@ -66,4 +67,3 @@ atconjl : atcon atconjl
 atcon   : MASKBITS
         | LPAREN MASKBITS RPAREN REPEAT NAT
         ;
-

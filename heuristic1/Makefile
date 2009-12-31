@@ -2,40 +2,38 @@ CFLAGS = -std=gnu99 -pipe -combine
 DEBUG_CFLAGS= -ggdb3 -Wall -Wextra -DDEBUG #debug
 PROFILE_CFLAGS = -O3 -march=core2 -ggdb3
 RELEASE_CFLAGS= -O3 -march=core2
-LIBS= -lm -lpthread -ltcmalloc
+LIBS= -lm -lpthread -ltcmalloc -lfl
 PROF_LIBS = -lprofiler
 NAME=tblcompile
 CC=gcc
 
-all: release profile debug makerules TAGS
+all: bitmask bitmask.profile bitmask.debug h1 h1.debug h1.profile makerules 
 
-profile: tblcompile.profile
-tblcompile.profile: tblcompile.c tblcompile.h xtrapbits.h printing.c printing.h
+bitmask.profile: tblcompile.c tblcompile.h xtrapbits.h printing.c printing.h
 	@echo Making profile...
-	$(CC) $(CFLAGS) $(PROFILE_CFLAGS) $(LIBS) $(PROF_LIBS) -o tblcompile.profile tblcompile.c printing.c
+	$(CC) $(CFLAGS) $(PROFILE_CFLAGS) $(LIBS) $(PROF_LIBS) -o $@ tblcompile.c printing.c
 
-debug: tblcompile.debug
-tblcompile.debug: tblcompile.c tblcompile.h xtrapbits.h printing.c printing.h
+bitmask.debug: tblcompile.c tblcompile.h xtrapbits.h printing.c printing.h
 	@echo Making debug...
-	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) $(LIBS) -o tblcompile.debug tblcompile.c printing.c
+	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) $(LIBS) -o $@ tblcompile.c printing.c
 
-release: tblcompile
-tblcompile: tblcompile.c tblcompile.h xtrapbits.h printing.c printing.h
+bitmask: tblcompile.c tblcompile.h xtrapbits.h printing.c printing.h
 	@echo Making release...
-	$(CC) $(CFLAGS) $(RELEASE_CFLAGS) $(LIBS) -o tblcompile tblcompile.c printing.c
+	$(CC) $(CFLAGS) $(RELEASE_CFLAGS) $(LIBS) -o $@ tblcompile.c printing.c
 
 makerules: makerules.c
-	$(CC) $(CFLAGS) $(RELEASE_CFLAGS) makerules.c -o makerules
+	$(CC) $(CFLAGS) $(RELEASE_CFLAGS) makerules.c -o $@
 
-TAGS: tblcompile.c tblcompile.h xtrapbits.h printing.c printing.h
-	@-etags.emacs $?
+lex.yy.c: regex.l
+	flex regex.l
+regex.tab.c: lex.yy.c printing.h regex.y
+	bison regex.y
+h1.debug: regex.c regex.tab.c printing.c printing.h util.h
+	$(CC) $(CFLAGS) $(PROFILE_FLAGS) $(LIBS) regex.c printing.c -o $@ 
 
 #utility targets
 clean:
 	@-rm *~ *.o $(NAME) 2> /dev/null
-
-bench:
-	python bigtest.py
 
 #hack to get flymake mode to work with emacs 23
 .FLYMAKE-HACK: check-syntax
