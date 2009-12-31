@@ -3,6 +3,8 @@ filter
 tblcompile
 tblcompile.debug
 tblcompile.profile
+lex.yy.c
+regex.tab.c
 makerules
 .emacs*
 *.gch
