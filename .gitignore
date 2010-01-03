@@ -1,10 +1,10 @@
 *.o
-filter
 tblcompile
 tblcompile.debug
 tblcompile.profile
-lex.yy.c
-regex.tab.c
+*.yy.c
+*.tab.h
+*.tab.c
 makerules
 .emacs*
 *.gch
@@ -18,3 +18,10 @@ TAGS
 *.txt
 *.bin
 documents/*
+bitmask
+bitmask.debug
+bitmask.profile
+h1
+h1.debug
+h1.profile
+
