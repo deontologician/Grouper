@@ -1,13 +1,10 @@
 %option yylineno
 
 %{
-
-typedef YYTOKENTYPE enum {
-        LCARET, RCARET, LBRACKET, RBRACKET, LPAREN, RPAREN, EQUAL, ALTERNATE,
-        REPEAT, CONJUNCT, DASH, COLON, NEWLINE, MASKBITS, NAT, ENDOFFILE
-};
-
+#include "regex.tab.h"
 %}
+
+%option nounput
 
 %%
 
@@ -36,7 +33,7 @@ typedef YYTOKENTYPE enum {
 [ \t\r]+   { /* insignificant whitespace */ }
 
 .         {
-             Error("Invalid character in policy file on line %d : '%c'\n",
+             Error("Invalid character in policy file on line %d : '%s'\n",
                    yylineno, yytext);
           }
 
