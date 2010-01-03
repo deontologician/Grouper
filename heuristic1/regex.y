@@ -6,8 +6,8 @@
         
         void yyerror(const char *str) 
         {
-                Error("Could not parse policy file. Line %d, token %s\n",
-                      yylineno, yytext);
+                Error("Error: %s\n.Could not parse policy file. Line %d, token %s\n",
+                      str, yylineno, yytext);
         }
 %}
 
