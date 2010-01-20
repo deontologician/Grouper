@@ -286,14 +286,14 @@ if __name__ == '__main__':
     t_start = time.time()
     for i in xrange(options.rounds):
         if options.outfile is not None and options.rounds != 1:
+            filename = "%s_%d.csv" % (options.outfile, i + 1)
+        elif options.outfile is None and options.rounds != 1:
             filename = "%s_%d.csv" % (prefix, i + 1)
-        elif options.rounds > 1:
-            filename = "%s_%d.csv" % (options.outfile, i)
-        elif options.outfile is None and options.rounds == 1:
+        elif options.outfile is not None and options.rounds == 1:
             filename = "%s.csv" % options.outfile
-        else:
-            print "illegal combination of outfile and rounds"
-            exit()
+        elif options.outfile is None and options.rounds == 1:
+            filename = "%s.csv" % prefix
+
         r_start = time.time()
         multi_d_test(mem_steps, rule_steps, bit_steps, 
                      data_size=options.data_size,
