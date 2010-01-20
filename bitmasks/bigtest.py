@@ -47,13 +47,12 @@ def mem_levels(bitlength = 104, rules = 10000, max_space = 3500000000):
 
 def make_rule_file(bits, rules):
     """Create a random rule file with the number of bits and rules specified"""
-    filename = '%dbx%drules.pol' % (bits,rules)
-    print "** Writing %s ..." % filename
-    check_call(['./makerules', str(bits), str(rules), str(filename)])
-    print "** Finished writing %s." % filename
-    return filename
+    rule_filename = '%dbx%drules.pol' % (bits,rules)
+    print "** Writing %s ..." % rule_filename
+    check_call(['./makerules', str(bits), str(rules), str(rule_filename)])
+    return rule_filename
 
-def build_test_input(inputsize = 12, data_filename="%dMBrandom.bin"):
+def build_test_input(bits = 104, inputsize = 100, data_filename="%dKpackets.bin"):
     """Generates a random data file
 
     inputsize : size of random input in MB
@@ -61,8 +60,10 @@ def build_test_input(inputsize = 12, data_filename="%dMBrandom.bin"):
     """
     # create a random binary file of inputsize megabytes
     data_filename = data_filename % inputsize
-    os.system('head --bytes=%d000000 /dev/urandom > %s' % 
-              (inputsize, data_filename))
+    print "** Building test input %s ..." % data_filename
+    file_size = ceil_div((bits * inputsize * 1000), 8)
+    os.system('head --bytes=%d /dev/urandom > %s' % 
+              (file_size, data_filename))
     return data_filename
 
 def min_bytes(rules, bits):
@@ -95,26 +96,30 @@ def min_tables(m, n, b):
         
 def multi_d_test(mem_steps, rule_steps, bit_steps, 
                  programname = './tblcompile',
-                 data_size = 10,
+                 data_size = 100,
                  test_filename = 'test_file.csv'):
     """Do multi-dimensional test with the given steps"""
     # make a new data file if necessary
-    data_filename = build_test_input(data_size) if data_size != 10 else '10MBrandom.bin'
+    
     all_steps = mem_steps is None
     with open(test_filename,'w') as test_file:
         writer = csv.writer(test_file)
-        writer.writerow(['memory allowed','number of rules','packet size in bits',
-                         'kbps','pps','table build time', 'memory used',
-                         'number of tables', 'policy read time', 'total run time',
-                         'repeat run', 'command'])
+        fields = ['memory allowed','number of rules','packet size in bits',
+                  'kbps','pps','table build time', 'memory used',
+                  'number of tables', 'policy read time', 'total run time',
+                  'repeat run', 'command', 'cpu process time',
+                  'real process time']
+        dep_fields = len(fields) - 3 # number of dependent fields (which may be empty)
+        writer.writerow(fields)
         # dict for memoizing results
         memoizer = {}
         for bits in bit_steps:
+            data_filename = build_test_input(bits, data_size)
             for rules in rule_steps:
                 if (bits + 1) * rules > 1000000000: # max is 1GB
                     print "Rule file will be too large to be practical"
                     for mem in mem_steps:
-                        writer.writerow([mem,rules,bits,'','','','','','','','',''])
+                        writer.writerow([mem,rules,bits] + ['']*dep_fields )
                     continue
                 else:
                     rule_filename = make_rule_file(bits, rules)
@@ -125,13 +130,11 @@ def multi_d_test(mem_steps, rule_steps, bit_steps,
                     print "%d bytes:" % mem
                     if mem < min_bytes(rules, bits):
                         print "\tNot enough memory for rules and bits given"
-                        writer.writerow([mem, rules, bits,'','','','','','','',''])
+                        writer.writerow([mem, rules, bits] + ['']*dep_fields)
                         continue
                     elif mem >= max_bytes(rules, bits):
                         print "\tNeeds only one table"
-                        writer.writerow([mem, rules, bits, 'redo', 'redo',
-                                         'redo','redo','redo', 'redo', 'redo', 'redo',
-                                         'redo'])
+                        writer.writerow([mem, rules, bits] + ['redo']*dep_fields )
                         continue
                     # find the minimum memory and tables
                     tables, memory_used = min_tables(mem, rules, bits)
@@ -146,10 +149,12 @@ def multi_d_test(mem_steps, rule_steps, bit_steps,
                     key = (tables, memory_used, bits, rules)
                     if key in memoizer:
                         res = memoizer[key]
-                        writer.writerow([mem, rules, bits, res['kbps'],
-                                         res['pps'], res['build_time'], 
-                                         memory_used, tables, res['pol_read'],
-                                         res['total_time'], 'true', runstring])
+                        write_array = [mem, rules, bits, res['kbps'],
+                                       res['pps'], res['build_time'], 
+                                       memory_used, tables, res['pol_read'],
+                                       res['total_time'], 'true', runstring,
+                                       res['cpu_process'], res['real_process']]
+                        writer.writerow(write_array)
                         print "\tRun already completed, using cached values"
                         continue
 
@@ -163,32 +168,41 @@ def multi_d_test(mem_steps, rule_steps, bit_steps,
                     
                     # calculate final values
 
-                    # data_size is in MB, so we convert it to bits
-                    data_bits = Decimal(data_size * 1000000 * 8)
-
                     # the timing values returned are in microseconds, so we must
                     # divide them by 1,000,000 to get seconds
                     usec2sec = lambda x: Decimal(x) / 1000000
                     read_secs = usec2sec(timings['read'])
                     build_secs = usec2sec(timings['build'])
-                    process_secs = usec2sec(timings['process'])
+                    cpu_process_secs = usec2sec(timings['cpu_process'])
+                    if cpu_process_secs == Decimal(0):
+                        print "CPU time measured was below system resolution, " \
+                        "increase the number of packets being processed and try again"
+                        os.remove(rule_filename)
+                        os.remove(data_filename)
+                        exit()
+                    real_process_secs = usec2sec(timings['real_process'])
                     total_secs = usec2sec(timings['total'])
-                    
-                    Kbps = Decimal( data_bits / 1000 ) / process_secs
-                    pps  = Decimal( data_bits / bits ) / process_secs
+                    num_packets = data_size * 1000
+                    pps = Decimal(num_packets) / cpu_process_secs
+                    Kbps = Decimal(1500 * 8 * num_packets) / cpu_process_secs
                     
                     # append current run info to the benchmark file
                     writer.writerow([mem, rules, bits, q(Kbps),
                                      q(pps), q2(build_secs),
                                      memory_used, tables, q2(read_secs),
-                                     q2(total_secs), 'false', runstring])
+                                     q2(total_secs), 'false', runstring,
+                                     q2(cpu_process_secs), q2(real_process_secs)])
                     # add current run info to the memoizer
                     memoizer[key] = dict(kbps = q(Kbps), pps = q(pps), 
                                          build_time = q2(build_secs), 
                                          pol_read = q2(read_secs),
-                                         total_time = q2(total_secs))
+                                         total_time = q2(total_secs),
+                                         cpu_process = q2(cpu_process_secs),
+                                         real_process = q2(real_process_secs))
                 #clean up rule file
                 os.remove(rule_filename)
+            #clean up data file
+            os.remove(data_filename)
 
 def q(v):
     """Convenience function to return Decimal value as a string rounded to the
@@ -202,9 +216,9 @@ def q2(v):
 
 def durationstr(secs):
     secs = int(secs)
-    seconds, minutes = divmod(secs, 60)
-    minutes, hours = divmod(minutes, 60)
-    hours, days = divmod(hours, 24)
+    mins,seconds = divmod(secs, 60)
+    hrs, minutes = divmod(mins, 60)
+    days, hours = divmod(hrs, 24)
     return "%d days %d hours %d minutes %d seconds" % (days,hours,minutes,seconds)
 
 def starttest():
@@ -235,8 +249,8 @@ if __name__ == '__main__':
     parser.add_option('-b', '--bits', dest = 'bits', type="int",
                       help = "Number of relevent bits to test")
     parser.add_option('-d', '--data-size', dest='data_size', type='int',
-                      default = 10,
-                      help = "Size in MB of the input file")
+                      default = 100,
+                      help = "How many Kilo-packets to process per test")
     (options, args) = parser.parse_args(sys.argv)
 
     #set the decimal precision
