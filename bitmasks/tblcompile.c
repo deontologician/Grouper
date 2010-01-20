@@ -3,8 +3,8 @@
 int main(int argc, char* argv[])
 {
         profile_t outer_time, inner_time;
-        long total_time, read_time, build_time;
-        clock_t process_time;   /* We measure processing time in CPU seconds */
+        long total_time, read_time, build_time, real_process_time;
+        clock_t cpu_process_time;   /* We measure processing time in CPU seconds */
         start_timing(&outer_time);
         
         /* Check for the proper number of arguments. Print usage if wrong
@@ -83,11 +83,12 @@ int main(int argc, char* argv[])
                       build_time);
 
                 start_timing(&inner_time);
-                process_time = clock();
+                cpu_process_time = clock();
                 /* Process packets with single table here */
-                process_time = clock() - process_time;
+                real_process_time = end_timing(&inner_time);
+                cpu_process_time = clock() - cpu_process_time;
                 Trace("Took %ld microseconds to finish processing with single table\n",
-                        process_time);
+                        cpu_process_time);
                 
                 
         }else{
@@ -139,11 +140,13 @@ int main(int argc, char* argv[])
                 Trace("Took %ld microseconds to finish building tables.\n",build_time);
 
                 /* Read input and classify input until EOF */
-                process_time = clock();
+                start_timing(&inner_time);
+                cpu_process_time = clock();
                 read_input_and_classify(pol,d,even_tables,odd_tables);
-                process_time = clock() - process_time;
-                Trace("Took %ld microseconds to finish processing packets\n",
-                        process_time);
+                real_process_time = end_timing(&inner_time);
+                cpu_process_time = clock() - cpu_process_time;
+                Trace("Took (%ld cpu, %ld real) microseconds to finish processing "
+                      "packets\n", cpu_process_time, real_process_time);
                 
                 /* Release resources: */
                 free(even_tables);
@@ -155,9 +158,9 @@ int main(int argc, char* argv[])
         Trace("Took %ld microseconds total\n", total_time);
         /* We print the next line unconditionally for external tools to do
          * record keeping */
-        fprintf(stderr, "{ 'read' : %ld, 'build' : %ld, 'process' : %ld,"
-                " 'total' : %ld }\n", read_time, build_time, 
-                process_time, total_time);
+        fprintf(stderr, "{ 'read' : %ld, 'build' : %ld, 'cpu_process' : %ld,"
+                " 'real_process' : %ld, 'total' : %ld }\n", read_time, build_time, 
+                cpu_process_time, real_process_time, total_time);
 
         return EXIT_SUCCESS;
 }
