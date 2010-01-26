@@ -1,12 +1,13 @@
+#!/usr/bin/env python
 """This is to do a full benchmark on the packet filter as well as various
 functions to help in building different kinds of tests"""
 
-from math import log, ceil
-from subprocess import Popen, PIPE, STDOUT, check_call, call
+from math import log
+from subprocess import Popen, PIPE, STDOUT, check_call
 from optparse import OptionParser
 from decimal import Decimal, getcontext
 import os
-import sys
+import yaml
 import csv
 import time
 
@@ -33,9 +34,8 @@ def mem_levels(bitlength = 104, rules = 10000, max_space = 3500000000):
     
     for t in xrange(max_tables,2,-1):
         bdivt, bmodt = divmod(bitlength, t)
-        total_bits = rules * ((t-bmodt)*(2**bdivt) + bmodt*(2**(bdivt+1)))
-        total_bytes = ceil_div(total_bits, 8)
-        if total_bytes <= max_space:            
+        total_bytes = ceil_div(rules, 8) * ((t-bmodt)*(2**bdivt) + bmodt*(2**(bdivt+1)))
+        if total_bytes <= max_space:          
             yield (t, total_bytes)
         else:
             return
@@ -43,12 +43,22 @@ def mem_levels(bitlength = 104, rules = 10000, max_space = 3500000000):
     table_bytes = ceil_div((2**bitlength)*int(log(rules,2)), 8)
     if table_bytes <= max_space:
         yield (1, table_bytes)
-    return 
+    return
+def table_mem_levels(bits, rules, filt, max_space = 3500000000):
+    """This is a generator to create the memory amounts when filtered by number
+    of tables needed. Specify the tables amounts for which the memory levels
+    should be returned in filt."""
+    for t, m in mem_levels(bits, rules, max_space):
+        if t in filt:
+            yield m
+        else:
+            continue
+    
 
 def make_rule_file(bits, rules):
     """Create a random rule file with the number of bits and rules specified"""
     rule_filename = '%dbx%drules.pol' % (bits,rules)
-    print "** Writing %s ..." % rule_filename
+    print "** Writing rule file %s ..." % rule_filename
     check_call(['./makerules', str(bits), str(rules), str(rule_filename)])
     return rule_filename
 
@@ -125,8 +135,9 @@ def multi_d_test(mem_steps, rule_steps, bit_steps,
                     rule_filename = make_rule_file(bits, rules)
                 print "Working with %s now..." % rule_filename
                 print "All-steps =",all_steps
-                if all_steps: mem_steps = mem_levels(bits,rules,2000000000)
-                for _,mem in mem_steps:
+                if all_steps: 
+                    mem_steps = [m for _,m in mem_levels(bits,rules,2000000000)]
+                for mem in mem_steps:
                     print "%d bytes:" % mem
                     if mem < min_bytes(rules, bits):
                         print "\tNot enough memory for rules and bits given"
@@ -215,6 +226,7 @@ def q2(v):
     return v.quantize(Decimal('0.0001'))
 
 def durationstr(secs):
+    "Creates a formatted string of the duration of secs"
     secs = int(secs)
     mins,seconds = divmod(secs, 60)
     hrs, minutes = divmod(mins, 60)
@@ -222,18 +234,21 @@ def durationstr(secs):
     return "%d days %d hours %d minutes %d seconds" % (days,hours,minutes,seconds)
 
 def starttest():
-    motd = open("/etc/motd","w")
-    Popen(['echo',"Tests running! Don't do anything CPU intensive"], stdout = motd)
-    motd.close()
+    "Call before beginning a test"
+    os.system("echo Tests running! Dont do anything CPU intensive > /etc/motd ")
+    os.system("wall Tests are starting up! Dont do anything CPU intensive")
 
-def endtest():
-    motd = open("/etc/motd","w")
-    Popen(['echo',"No tests currently running."], stdout = motd)
-    motd.close()
-        
+def endtest(email, start, end):
+    "Call when done with a test"
+    os.system("echo No tests currently running > /etc/motd")
+    os.system("wall Tests are finished.")
+    if email is not None:
+        os.system("echo 'Testing that began at %s completed. Took %s'" 
+                  " | mail -s 'Testing done.' %s " %
+                  (time.ctime(start), durationstr(end - start), email))
 
-if __name__ == '__main__':
-
+def main():
+    "The main function of bigtest. Parses command line options and runs"
     parser = OptionParser()
     parser.add_option('-o','--output',dest='outfile',
                       help = 'File to write benchmark results to',)
@@ -251,38 +266,44 @@ if __name__ == '__main__':
     parser.add_option('-d', '--data-size', dest='data_size', type='int',
                       default = 100,
                       help = "How many Kilo-packets to process per test")
-    (options, args) = parser.parse_args(sys.argv)
+    parser.add_option('-e', '--email', dest='email',
+                      help = "The email address to notify when testing is done.")
+    parser.add_option('-c', '--config', dest='config', 
+                      help = "YAML configuration file, needed if -a option is "
+                      "not specified")
+    (options, args) = parser.parse_args()
+
+    if args:
+        print "These arguments were not understood: %s" % " ".join(args)
 
     #set the decimal precision
     getcontext().prec = 32
 
-    #bigtests
-    # mem_steps  = 
-    # rule_steps = [1, 10, 50,
-    #               100, 500, 1000,
-    #               5000, 10000, 50000,
-    #               100000, 500000, 1000000]
-    # bit_steps = 
+    bit_steps  = []
+    mem_steps  = []
+    rule_steps = []
 
-    # 104 tests
     if options.all_tests:
         bit_steps = [options.bits]
         mem_steps = None
         prefix = "alltest%dbits" % options.bits
+        rule_steps = [10**3, 10**4, 10**5, 10**6]
     else:
-        bit_steps = [1, 10, 40, 
-                     70, 100, 200, 
-                     500, 1000, 1500,
-                     2500, 5000]
-        mem_steps = [1,1000,10000,
-                     100000,500000,1000000,
-                     10000000,100000000,500000000,
-                     1000000000, 1500000000, 2000000000]
         prefix = "steptest"
+        try:
+            with open(options.config, 'r') as configfile:
+                config = yaml.load(configfile)
+                bit_steps  = config["bit_steps"]
+                mem_steps  = config["mem_steps"]
+                rule_steps = config["rule_steps"]
+                
+        except TypeError:
+            print "Need to specify a config file if not doing all tests"
+            exit(1)
+       
 
-    rule_steps = [10**3, 10**4, 10**5, 10**6]
-    
     starttest()
+
     t_start = time.time()
     for i in xrange(options.rounds):
         if options.outfile is not None and options.rounds != 1:
@@ -294,13 +315,18 @@ if __name__ == '__main__':
         elif options.outfile is None and options.rounds == 1:
             filename = "%s.csv" % prefix
 
-        r_start = time.time()
+        round_start = time.time()
         multi_d_test(mem_steps, rule_steps, bit_steps, 
                      data_size=options.data_size,
                      test_filename = filename,
                      programname = options.programname)
-        r_end = time.time()
-        print "Round %d took %s" % (i, durationstr(r_end - r_start))
+        round_end = time.time()
+        print "Round %d took %s" % (i, durationstr(round_end - round_start))
     t_end = time.time()
     print "Total runtime: %s" % durationstr(t_end - t_start)
-    endtest()
+
+    endtest(options.email, t_start, t_end)
+    
+
+if __name__ == '__main__':
+    main()
