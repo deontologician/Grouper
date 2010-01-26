@@ -2,6 +2,7 @@
 tblcompile
 tblcompile.debug
 tblcompile.profile
+*.pdf
 *.yy.c
 *.tab.h
 *.tab.c
