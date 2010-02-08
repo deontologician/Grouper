@@ -11,11 +11,15 @@ import yaml
 import csv
 import time
 
+def GB(gb):
+    """Defined to reduce errors in zeros"""
+    return int(gb * 1000000000)
+
 def ceil_div(num, denom):
     """Returns the result of division by integers rounded up"""
     return (num + denom - 1) / denom
 
-def mem_levels(bitlength = 104, rules = 10000, max_space = 3500000000):
+def mem_levels(bitlength = 104, rules = 10000, max_space = GB(3.5)):
     """This is a generator for the number of tables needed for a given packet
     length and number of rules. It generates from minimum space needed up to
     maximum_space as well as the number of tables for each memory size
@@ -44,7 +48,7 @@ def mem_levels(bitlength = 104, rules = 10000, max_space = 3500000000):
     if table_bytes <= max_space:
         yield (1, table_bytes)
     return
-def table_mem_levels(bits, rules, filt, max_space = 3500000000):
+def table_mem_levels(bits, rules, filt, max_space = GB(3.5)):
     """This is a generator to create the memory amounts when filtered by number
     of tables needed. Specify the tables amounts for which the memory levels
     should be returned in filt."""
@@ -53,7 +57,45 @@ def table_mem_levels(bits, rules, filt, max_space = 3500000000):
             yield m
         else:
             continue
-    
+
+def gen_length(gen):
+    """Returns the length of a generator (exhausts the generator and may not
+    return if the generator does not halt!) """
+    return reduce(lambda x,_: x+1, gen, 0)
+
+def bounded_mem_levels(bits, rules, num = None, max_space = GB(3.5)):
+    """Generates the specified number of memory levels, equally spaced over the
+    memory levels fittable in max_space bytes of memory"""
+    gen = lambda: mem_levels(bits,rules, max_space) # a generator replicator
+    length = gen_length(gen()) # find the total length of our generator
+    if num is None: 
+        num = length # if no num given, just wrap the mem_levels generator
+    if num < 1: return
+    if num == 1:
+        yield gen().next()
+        return
+    if length < num: # num is a maximum number of steps
+        for item in gen():
+            yield item # we act as an id filter in this case
+        return # raises StopIteration exception
+
+    # if length is big enough we do the more complicated case
+    quanta, rem = divmod(length, num)
+
+    next_one = 0 # next index to print out
+    yielded = 0 # how many values have been yielded so far
+    even_flag = True # prevent changing to odds more than once
+    for j,(_, m) in enumerate(gen()):
+        if yielded == num - 1: # we only have to do yield the last element now
+            next_one = length - 1
+            continue
+        if even_flag and yielded == num - rem:
+            quanta += 1
+            even_flag = False
+        if j == next_one:
+            yield m
+            yielded += 1
+            next_one += quanta
 
 def make_rule_file(bits, rules):
     """Create a random rule file with the number of bits and rules specified"""
@@ -119,14 +161,14 @@ def multi_d_test(mem_steps, rule_steps, bit_steps,
                   'number of tables', 'policy read time', 'total run time',
                   'repeat run', 'command', 'cpu process time',
                   'real process time']
-        dep_fields = len(fields) - 3 # number of dependent fields (which may be empty)
+        dep_fields = len(fields) - 3 # number of dependent fields 
         writer.writerow(fields)
         # dict for memoizing results
         memoizer = {}
         for bits in bit_steps:
             data_filename = build_test_input(bits, data_size)
             for rules in rule_steps:
-                if (bits + 1) * rules > 1000000000: # max is 1GB
+                if (bits + 1) * rules > GB(1): # max is 1GB
                     print "Rule file will be too large to be practical"
                     for mem in mem_steps:
                         writer.writerow([mem,rules,bits] + ['']*dep_fields )
@@ -136,7 +178,10 @@ def multi_d_test(mem_steps, rule_steps, bit_steps,
                 print "Working with %s now..." % rule_filename
                 print "All-steps =",all_steps
                 if all_steps: 
-                    mem_steps = [m for _,m in mem_levels(bits,rules,2000000000)]
+                    mem_steps = [m for _,m in mem_levels(bits, rules, GB(2))]
+                if isinstance(mem_steps, int):
+                    mem_temp = mem_steps
+                    mem_steps = bounded_mem_levels(bits, rules, mem_temp)
                 for mem in mem_steps:
                     print "%d bytes:" % mem
                     if mem < min_bytes(rules, bits):
@@ -198,29 +243,30 @@ def multi_d_test(mem_steps, rule_steps, bit_steps,
                     Kbps = Decimal(1500 * 8 * num_packets) / cpu_process_secs
                     
                     # append current run info to the benchmark file
-                    writer.writerow([mem, rules, bits, q(Kbps),
-                                     q(pps), q2(build_secs),
-                                     memory_used, tables, q2(read_secs),
-                                     q2(total_secs), 'false', runstring,
-                                     q2(cpu_process_secs), q2(real_process_secs)])
+                    writer.writerow([mem, rules, bits, q1(Kbps),
+                                     q1(pps), q0001(build_secs),
+                                     memory_used, tables, q0001(read_secs),
+                                     q0001(total_secs), 'false', runstring,
+                                     q0001(cpu_process_secs), q0001(real_process_secs)])
                     # add current run info to the memoizer
-                    memoizer[key] = dict(kbps = q(Kbps), pps = q(pps), 
-                                         build_time = q2(build_secs), 
-                                         pol_read = q2(read_secs),
-                                         total_time = q2(total_secs),
-                                         cpu_process = q2(cpu_process_secs),
-                                         real_process = q2(real_process_secs))
+                    memoizer[key] = dict(kbps = q1(Kbps), pps = q1(pps), 
+                                         build_time = q0001(build_secs), 
+                                         pol_read = q0001(read_secs),
+                                         total_time = q0001(total_secs),
+                                         cpu_process = q0001(cpu_process_secs),
+                                         real_process = q0001(real_process_secs))
+                mem_steps = mem_temp # reset mem_steps
                 #clean up rule file
                 os.remove(rule_filename)
             #clean up data file
             os.remove(data_filename)
 
-def q(v):
+def q1(v):
     """Convenience function to return Decimal value as a string rounded to the
     nearest 1"""
     return v.quantize(Decimal('1'))
 
-def q2(v):
+def q0001(v):
     """Convenience function to return Decimal value as a string rounded to the
     nearest ten thousandth"""
     return v.quantize(Decimal('0.0001'))
@@ -271,6 +317,10 @@ def main():
     parser.add_option('-c', '--config', dest='config', 
                       help = "YAML configuration file, needed if -a option is "
                       "not specified")
+    parser.add_option('-m', '--memory-steps', dest='mem_steps', type = 'int',
+                      help = "Maximum number of memory increments to do")
+    parser.add_option('-l', '--rule-steps', dest='rule_steps',
+                      help = "A string denoting a list of rule values")
     (options, args) = parser.parse_args()
 
     if args:
@@ -285,9 +335,13 @@ def main():
 
     if options.all_tests:
         bit_steps = [options.bits]
-        mem_steps = None
+        mem_steps = options.mem_steps
         prefix = "alltest%dbits" % options.bits
-        rule_steps = [10**3, 10**4, 10**5, 10**6]
+        if rule_steps is not None:
+            rule_steps = list(eval(options.rule_steps))
+        else:
+            rule_steps = [10**3, 10**4, 10**5, 10**6]
+        
     else:
         prefix = "steptest"
         try:
@@ -314,7 +368,7 @@ def main():
             filename = "%s.csv" % options.outfile
         elif options.outfile is None and options.rounds == 1:
             filename = "%s.csv" % prefix
-
+        
         round_start = time.time()
         multi_d_test(mem_steps, rule_steps, bit_steps, 
                      data_size=options.data_size,
