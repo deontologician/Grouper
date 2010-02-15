@@ -419,7 +419,10 @@ def main():
     except Exception as e:
         print "Exception:",e
     finally:
-        endtest(options.email, t_start, t_end)
+        try:
+            endtest(options.email, t_start, t_end)
+        except UnboundLocalError:
+            endtest("root@localhost", 0,0)
     
 
 if __name__ == '__main__':
