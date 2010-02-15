@@ -194,7 +194,7 @@ def multi_d_test(mem_steps, rule_steps, bit_steps,
                         lowres = massive / 2
                         mem_steps = massive_levels(bits, rules, lowres,
                                                highres, max_space = GB(2))
-                if (bits + 1) * rules > GB(1): # max is 1GB
+                if (bits + 1) * rules > GB(1.5): # max is 1GB
                     print "Rule file will be too large to be practical"
                     for mem in mem_steps:
                         writer.writerow([mem,rules,bits] + ['']*dep_fields)
@@ -370,11 +370,14 @@ def main():
         mem_steps  = []
         rule_steps = []
         if options.all_tests or options.massive is not None:
+            if options.bits is None:
+                print "You must specify number of bits with -b for alltests"
+                exit(1)
             bit_steps = [options.bits]
             max_steps = options.max_steps
             mem_steps = None
             prefix = "alltest%dbits" % options.bits
-            if rule_steps is not None:
+            if options.rule_steps is not None:
                 rule_steps = list(eval(options.rule_steps))
             else:
                 rule_steps = [10**3, 10**4, 10**5, 10**6]
@@ -416,8 +419,11 @@ def main():
             print "Round %d took %s" % (i, durationstr(round_end - round_start))
         t_end = time.time()
         print "Total runtime: %s" % durationstr(t_end - t_start)
-    except Exception as e:
-        print "Exception:",e
+    except Exception:
+        print "----Exception----".center(80)
+        import traceback
+        traceback.print_exc()
+        print "-----------------".center(80)
     finally:
         try:
             endtest(options.email, t_start, t_end)
