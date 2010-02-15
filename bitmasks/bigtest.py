@@ -83,7 +83,7 @@ def bounded_mem_levels(bits, rules, num = None, max_space = GB(3.5)):
     quanta, rem = divmod(length, num)
 
     next_one = 0 # next index to print out
-    yielded = 0 # how many values have been yielded so far
+    yielded  = 0 # how many values have been yielded so far
     even_flag = True # prevent changing to odds more than once
     for j,(_, m) in enumerate(gen()):
         if yielded == num - 1: # we only have to do yield the last element now
@@ -96,6 +96,19 @@ def bounded_mem_levels(bits, rules, num = None, max_space = GB(3.5)):
             yield m
             yielded += 1
             next_one += quanta
+
+def massive_levels(bits, rules, lowres = 50, highres = 50, max_space = GB(3.5)):
+    """Filters a mem_level generator to produce approximately the number of
+    lowres data points and exactly the number of highres data points"""
+    gen = lambda: mem_levels(bits, rules, max_space) # capture generator
+    length = gen_length(gen()) # find the total length
+    level = gen()
+    for i in xrange(0,length-highres):
+        item = next(level)
+        if i % ((length-highres)/lowres) == 0:
+            yield item
+    for item in level:
+        yield item
 
 def make_rule_file(bits, rules):
     """Create a random rule file with the number of bits and rules specified"""
@@ -168,6 +181,11 @@ def multi_d_test(mem_steps, rule_steps, bit_steps,
         for bits in bit_steps:
             data_filename = build_test_input(bits, data_size)
             for rules in rule_steps:
+                if all_steps: 
+                    mem_steps = [m for _,m in mem_levels(bits, rules, GB(2))]
+                if isinstance(mem_steps, int):
+                    mem_temp = mem_steps
+                    mem_steps = bounded_mem_levels(bits, rules, mem_temp)
                 if (bits + 1) * rules > GB(1): # max is 1GB
                     print "Rule file will be too large to be practical"
                     for mem in mem_steps:
@@ -177,11 +195,6 @@ def multi_d_test(mem_steps, rule_steps, bit_steps,
                     rule_filename = make_rule_file(bits, rules)
                 print "Working with %s now..." % rule_filename
                 print "All-steps =",all_steps
-                if all_steps: 
-                    mem_steps = [m for _,m in mem_levels(bits, rules, GB(2))]
-                if isinstance(mem_steps, int):
-                    mem_temp = mem_steps
-                    mem_steps = bounded_mem_levels(bits, rules, mem_temp)
                 for mem in mem_steps:
                     print "%d bytes:" % mem
                     if mem < min_bytes(rules, bits):
