@@ -104,10 +104,10 @@ def massive_levels(bits, rules, lowres = 50, highres = 50, max_space = GB(3.5)):
     length = gen_length(gen()) # find the total length
     level = gen()
     for i in xrange(0,length-highres):
-        item = next(level)
+        _, item = next(level)
         if i % ((length-highres)/lowres) == 0:
             yield item
-    for item in level:
+    for _, item in level:
         yield item
 
 def make_rule_file(bits, rules):
@@ -162,7 +162,10 @@ def min_tables(m, n, b):
 def multi_d_test(mem_steps, rule_steps, bit_steps, 
                  programname = './tblcompile',
                  data_size = 100,
-                 test_filename = 'test_file.csv'):
+                 test_filename = 'test_file.csv',
+                 max_steps = None,
+                 massive = False,
+                 dryrun = False):
     """Do multi-dimensional test with the given steps"""
     # make a new data file if necessary
     
@@ -181,15 +184,20 @@ def multi_d_test(mem_steps, rule_steps, bit_steps,
         for bits in bit_steps:
             data_filename = build_test_input(bits, data_size)
             for rules in rule_steps:
-                if all_steps: 
-                    mem_steps = [m for _,m in mem_levels(bits, rules, GB(2))]
-                if isinstance(mem_steps, int):
-                    mem_temp = mem_steps
-                    mem_steps = bounded_mem_levels(bits, rules, mem_temp)
+                if all_steps:
+                    if max_steps is not None:
+                        mem_steps = bounded_mem_levels(bits, rules, GB(2))
+                    else:
+                        mem_steps = [m for _,m in mem_levels(bits, rules, GB(2))]
+                    if massive is not None:
+                        highres = ceil_div(massive,2)
+                        lowres = massive / 2
+                        mem_steps = massive_levels(bits, rules, lowres,
+                                               highres, max_space = GB(2))
                 if (bits + 1) * rules > GB(1): # max is 1GB
                     print "Rule file will be too large to be practical"
                     for mem in mem_steps:
-                        writer.writerow([mem,rules,bits] + ['']*dep_fields )
+                        writer.writerow([mem,rules,bits] + ['']*dep_fields)
                     continue
                 else:
                     rule_filename = make_rule_file(bits, rules)
@@ -226,15 +234,21 @@ def multi_d_test(mem_steps, rule_steps, bit_steps,
                         writer.writerow(write_array)
                         print "\tRun already completed, using cached values"
                         continue
-
                     
                     #run the benchmark for the current memory size over the input
                     print "\tBenchmarking '", runstring , "' ... "
-                    runbench = Popen(runstring , stderr = STDOUT, stdout = PIPE,
-                                     shell=True)
-                    timings = eval(runbench.communicate()[0]) #expecting a dict
-                    print "\tTimings:", timings
-                    
+                    timings = {}
+                    if not dryrun:
+                        runbench = Popen(runstring , stderr = STDOUT, stdout = PIPE,
+                                         shell=True)
+                        timings = eval(runbench.communicate()[0]) #expecting a dict
+                    else:
+                        #fake run timings
+                        timings = { 'read' : 123456, 'build' : 123456,
+                                    'cpu_process' : 123456, 
+                                    'real_process' : 123456, 'total' : 456789 }
+
+                    print "\tTimings:", timings                  
                     # calculate final values
 
                     # the timing values returned are in microseconds, so we must
@@ -268,7 +282,6 @@ def multi_d_test(mem_steps, rule_steps, bit_steps,
                                          total_time = q0001(total_secs),
                                          cpu_process = q0001(cpu_process_secs),
                                          real_process = q0001(real_process_secs))
-                mem_steps = mem_temp # reset mem_steps
                 #clean up rule file
                 os.remove(rule_filename)
             #clean up data file
@@ -330,10 +343,17 @@ def main():
     parser.add_option('-c', '--config', dest='config', 
                       help = "YAML configuration file, needed if -a option is "
                       "not specified")
-    parser.add_option('-m', '--memory-steps', dest='mem_steps', type = 'int',
+    parser.add_option('-m', '--max-mem-steps', dest='max_steps', type = 'int',
                       help = "Maximum number of memory increments to do")
     parser.add_option('-l', '--rule-steps', dest='rule_steps',
                       help = "A string denoting a list of rule values")
+    parser.add_option('-M','--massive_test', dest='massive', type='int',
+                      help = "Number of levels in a massive test. Supplying this "
+                      "option obviates supplying -a")
+    parser.add_option('-T', '--testrun', dest='dryrun', action='store_true',
+                      default = False, 
+                      help = "Do a dry run of the test script, don't "
+                          "actually run the benchmark")
     (options, args) = parser.parse_args()
 
     if args:
@@ -346,9 +366,10 @@ def main():
     mem_steps  = []
     rule_steps = []
 
-    if options.all_tests:
+    if options.all_tests or options.massive is not None:
         bit_steps = [options.bits]
-        mem_steps = options.mem_steps
+        max_steps = options.max_steps
+        mem_steps = None
         prefix = "alltest%dbits" % options.bits
         if rule_steps is not None:
             rule_steps = list(eval(options.rule_steps))
@@ -386,7 +407,10 @@ def main():
         multi_d_test(mem_steps, rule_steps, bit_steps, 
                      data_size=options.data_size,
                      test_filename = filename,
-                     programname = options.programname)
+                     programname = options.programname,
+                     max_steps = options.max_steps,
+                     massive = options.massive,
+                     dryrun = options.dryrun)
         round_end = time.time()
         print "Round %d took %s" % (i, durationstr(round_end - round_start))
     t_end = time.time()
