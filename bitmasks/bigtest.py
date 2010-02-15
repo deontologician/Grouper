@@ -321,102 +321,105 @@ def endtest(email, start, end):
 
 def main():
     "The main function of bigtest. Parses command line options and runs"
-    parser = OptionParser()
-    parser.add_option('-o','--output',dest='outfile',
-                      help = 'File to write benchmark results to',)
-    parser.add_option('-p','--program',dest='programname', 
-                      default = './tblcompile',
-                      help = 'Name of program to benchmark')
-    parser.add_option('-a', '--all-tests', dest='all_tests',
-                      action = 'store_true', default = False,
-                      help = "Whether to do every table step or not")
-    parser.add_option('-r', '--repeat', dest='rounds', type="int",
-                      default = 1,
-                      help = "Number of times to repeat a test")
-    parser.add_option('-b', '--bits', dest = 'bits', type="int",
-                      help = "Number of relevent bits to test")
-    parser.add_option('-d', '--data-size', dest='data_size', type='int',
-                      default = 100,
-                      help = "How many Kilo-packets to process per test")
-    parser.add_option('-e', '--email', dest='email',
-                      help = "The email address to notify when testing is done.")
-    parser.add_option('-c', '--config', dest='config', 
-                      help = "YAML configuration file, needed if -a option is "
-                      "not specified")
-    parser.add_option('-m', '--max-mem-steps', dest='max_steps', type = 'int',
-                      help = "Maximum number of memory increments to do")
-    parser.add_option('-l', '--rule-steps', dest='rule_steps',
-                      help = "A string denoting a list of rule values")
-    parser.add_option('-M','--massive_test', dest='massive', type='int',
-                      help = "Number of levels in a massive test. Supplying this "
-                      "option obviates supplying -a")
-    parser.add_option('-T', '--testrun', dest='dryrun', action='store_true',
-                      default = False, 
-                      help = "Do a dry run of the test script, don't "
+    try:  
+        t_start = time.time()
+        t_end = time.time() # this is just declared for the finally clause
+
+        parser = OptionParser()
+        parser.add_option('-o','--output',dest='outfile',
+                          help = 'File to write benchmark results to',)
+        parser.add_option('-p','--program',dest='programname', 
+                          default = './tblcompile',
+                          help = 'Name of program to benchmark')
+        parser.add_option('-a', '--all-tests', dest='all_tests',
+                          action = 'store_true', default = False,
+                          help = "Whether to do every table step or not")
+        parser.add_option('-r', '--repeat', dest='rounds', type="int",
+                          default = 1,
+                          help = "Number of times to repeat a test")
+        parser.add_option('-b', '--bits', dest = 'bits', type="int",
+                          help = "Number of relevent bits to test")
+        parser.add_option('-d', '--data-size', dest='data_size', type='int',
+                          default = 100,
+                          help = "How many Kilo-packets to process per test")
+        parser.add_option('-e', '--email', dest='email',
+                          help = "The email address to notify when testing is done.")
+        parser.add_option('-c', '--config', dest='config', 
+                          help = "YAML configuration file, needed if -a option is "
+                          "not specified")
+        parser.add_option('-m', '--max-mem-steps', dest='max_steps', type = 'int',
+                          help = "Maximum number of memory increments to do")
+        parser.add_option('-l', '--rule-steps', dest='rule_steps',
+                          help = "A string denoting a list of rule values")
+        parser.add_option('-M','--massive_test', dest='massive', type='int',
+                          help = "Number of levels in a massive test. Supplying this "
+                          "option obviates supplying -a")
+        parser.add_option('-T', '--testrun', dest='dryrun', action='store_true',
+                          default = False, 
+                          help = "Do a dry run of the test script, don't "
                           "actually run the benchmark")
-    (options, args) = parser.parse_args()
+        (options, args) = parser.parse_args()
 
-    if args:
-        print "These arguments were not understood: %s" % " ".join(args)
+        if args:
+            print "These arguments were not understood: %s" % " ".join(args)
 
-    #set the decimal precision
-    getcontext().prec = 32
+        #set the decimal precision
+        getcontext().prec = 32
 
-    bit_steps  = []
-    mem_steps  = []
-    rule_steps = []
-
-    if options.all_tests or options.massive is not None:
-        bit_steps = [options.bits]
-        max_steps = options.max_steps
-        mem_steps = None
-        prefix = "alltest%dbits" % options.bits
-        if rule_steps is not None:
-            rule_steps = list(eval(options.rule_steps))
+        bit_steps  = []
+        mem_steps  = []
+        rule_steps = []
+        if options.all_tests or options.massive is not None:
+            bit_steps = [options.bits]
+            max_steps = options.max_steps
+            mem_steps = None
+            prefix = "alltest%dbits" % options.bits
+            if rule_steps is not None:
+                rule_steps = list(eval(options.rule_steps))
+            else:
+                rule_steps = [10**3, 10**4, 10**5, 10**6]
+        
         else:
-            rule_steps = [10**3, 10**4, 10**5, 10**6]
-        
-    else:
-        prefix = "steptest"
-        try:
-            with open(options.config, 'r') as configfile:
-                config = yaml.load(configfile)
-                bit_steps  = config["bit_steps"]
-                mem_steps  = config["mem_steps"]
-                rule_steps = config["rule_steps"]
+            prefix = "steptest"
+            try:
+                with open(options.config, 'r') as configfile:
+                    config = yaml.load(configfile)
+                    bit_steps  = config["bit_steps"]
+                    mem_steps  = config["mem_steps"]
+                    rule_steps = config["rule_steps"]
                 
-        except TypeError:
-            print "Need to specify a config file if not doing all tests"
-            exit(1)
+            except TypeError:
+                print "Need to specify a config file if not doing all tests"
+                exit(1)
        
+        starttest()
 
-    starttest()
-
-    t_start = time.time()
-    for i in xrange(options.rounds):
-        if options.outfile is not None and options.rounds != 1:
-            filename = "%s_%d.csv" % (options.outfile, i + 1)
-        elif options.outfile is None and options.rounds != 1:
-            filename = "%s_%d.csv" % (prefix, i + 1)
-        elif options.outfile is not None and options.rounds == 1:
-            filename = "%s.csv" % options.outfile
-        elif options.outfile is None and options.rounds == 1:
-            filename = "%s.csv" % prefix
+        for i in xrange(options.rounds):
+            if options.outfile is not None and options.rounds != 1:
+                filename = "%s_%d.csv" % (options.outfile, i + 1)
+            elif options.outfile is None and options.rounds != 1:
+                filename = "%s_%d.csv" % (prefix, i + 1)
+            elif options.outfile is not None and options.rounds == 1:
+                filename = "%s.csv" % options.outfile
+            elif options.outfile is None and options.rounds == 1:
+                filename = "%s.csv" % prefix
         
-        round_start = time.time()
-        multi_d_test(mem_steps, rule_steps, bit_steps, 
-                     data_size=options.data_size,
-                     test_filename = filename,
-                     programname = options.programname,
-                     max_steps = options.max_steps,
-                     massive = options.massive,
-                     dryrun = options.dryrun)
-        round_end = time.time()
-        print "Round %d took %s" % (i, durationstr(round_end - round_start))
-    t_end = time.time()
-    print "Total runtime: %s" % durationstr(t_end - t_start)
-
-    endtest(options.email, t_start, t_end)
+            round_start = time.time()
+            multi_d_test(mem_steps, rule_steps, bit_steps, 
+                         data_size=options.data_size,
+                         test_filename = filename,
+                         programname = options.programname,
+                         max_steps = options.max_steps,
+                         massive = options.massive,
+                         dryrun = options.dryrun)
+            round_end = time.time()
+            print "Round %d took %s" % (i, durationstr(round_end - round_start))
+        t_end = time.time()
+        print "Total runtime: %s" % durationstr(t_end - t_start)
+    except Exception as e:
+        print "Exception:",e
+    finally:
+        endtest(options.email, t_start, t_end)
     
 
 if __name__ == '__main__':
