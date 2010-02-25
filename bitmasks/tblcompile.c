@@ -77,7 +77,8 @@ int main(int argc, char* argv[])
                 uint8_t (*single_table)[width];
                 start_timing(&inner_time);
                 single_table = (uint8_t (*)[width]) create_single_table(pol, width);
-
+                array2d_free(pol.q_masks);
+                array2d_free(pol.b_masks);
                 build_time = end_timing(&inner_time);
                 Trace("Took %ld microseconds to finish building single table\n",
                       build_time);
@@ -85,11 +86,12 @@ int main(int argc, char* argv[])
                 start_timing(&inner_time);
                 cpu_process_time = clock();
                 /* Process packets with single table here */
+                read_input_and_classify_single(pol, width, single_table);
+                
                 real_process_time = end_timing(&inner_time);
                 cpu_process_time = clock() - cpu_process_time;
                 Trace("Took %ld microseconds to finish processing with single table\n",
-                        cpu_process_time);
-                
+                        real_process_time);
                 
         }else{
                 /* Calculate heights and depths */
@@ -192,7 +194,7 @@ uint64_t min_tables(uint64_t m , uint64_t n , uint64_t b)
          * less, we won't allow bitlengths greater than 58 to be considered for
          * the one table solution. */
         if(b <= 58 && 
-           m >= (8 * ceil_div((uint64_t)log2(n),8)) * exp2(b) ) return 1;
+           m >= (8 * ceil_div((uint64_t)log2(n),8)) * (uint64_t)exp2(b) ) return 1;
 
         /* Initial highest number of tables that might be needed */
         uint64_t high = ceil_div(b,2);
@@ -560,41 +562,26 @@ uint8_t * create_single_table(policy pol, uint64_t width)
 {
         uint64_t height = (uint64_t) exp2(pol.b);
         uint8_t (*table)[width] = calloc(height, width);
-        /* temps to copy mask info into */
-        union64 q_temp = {.num = 0};
-        union64 b_temp = {.num = 0};
         /* For each possible input bitarray*/
         for(union64 i = {.num = 0}; i.num < height; i.num++){
-                /* Check each rule to see which is the first match */
-                for(union64 j = {.num = 0}; j.num < pol.n; j.num++){
-                        /* Copy the relevant bytes into the temp variables for
-                         * comparison. Note that these temps do not need to be
-                         * zeroed each time they are used since width is
-                         * constant for each run of the program */
-                        for(uint64_t k = 0;k < width; k++){
-                                q_temp.arr[k] = pol.q_masks[j.num][k];
-                                b_temp.arr[k] = pol.b_masks[j.num][k];
-                        }
-                        //Trace("q_temp: ");
-                        //print_mem(q_temp.arr,8,8);
-                        //Trace("b_temp: ");
-                        //print_mem(b_temp.arr,8,8);
-                        if((i.num & q_temp.num) != b_temp.num){
+                /* Check each rule to see which is the first match 
+                 * j starts at 1, since rule 0 means "no match" */
+                for(union64 j = {.num = 1}; j.num <= pol.n; j.num++){
+                        /* Mask and compare with the current i */
+                        if((i.num & (uint64_t)pol.q_masks[j.num - 1]) 
+                           != (uint64_t)pol.b_masks[j.num - 1]){
                                 Trace("Input %"PRIu64" (",i.num);
                                 for(uint64_t k = pol.B/8; k != 0; k--){
                                         printbits(i.arr[k-1]);
                                         Trace(" ");
                                 }
-                                Trace(") matches rule %"PRIu64"\n",j.num + 1);
+                                Trace(") matches rule %"PRIu64"\n", j.num);
                                 /* Set the table row equal to the rule number
-                                 * that matched */
-                                for(uint64_t k = 0; k < width; k++){
-                                        /* Need to increment j by one when
-                                         * storing rule (rule 0 is always no
-                                         * match) */
-                                        table[i.num][k] = 
-                                                ((union64)(j.num + 1)).arr[k];
-                                }
+                                 * that matched. Note that this way of doing it
+                                 * is dependent on a little-endian integer
+                                 * representation. A portable implementation
+                                 * will need to do something more complicated */
+                                memcpy(table[i.num], j.arr, width);
                                 break;
                         }
                         /* A convenient property here is that if the loop to
@@ -604,6 +591,26 @@ uint8_t * create_single_table(policy pol, uint64_t width)
                 }
         }
         return (uint8_t*) table;
+}
+
+/* Classify packets with a single table */
+void read_input_and_classify_single(policy pol, 
+                                    uint64_t width, 
+                                    uint8_t (*table)[width])
+{
+        uint64_t packets_read = 0;
+        union64 inpacket = {.num = 0}; /* Current input temp */
+        union64 rule_matched = {.num = 0}; /* It is important this is zeroed as
+                                            * we will be copying into its least
+                                            * significant bytes only, relying on
+                                            * the most significant bytes to
+                                            * remain zero.*/
+        while(fread(inpacket.arr, sizeof(uint8_t), pol.pl, stdin) == pol.pl){
+                memcpy(rule_matched.arr, table[inpacket.num], width);
+                Print("%"PRIu64"\n", rule_matched.num);
+                packets_read++;
+        }
+        Trace("Packets read in: %"PRIu64"\n", packets_read);
 }
 
 /* Filters incoming packets and classifies them to stdout */
@@ -648,7 +655,8 @@ void read_input_and_classify(policy pol, table_dims dim,
                 memset(bit_total, 0, pol.N/8);
                 /* Copy the first bit array into the total Note that we must
                  * have at least one even section, its the odd sections that may
-                 * not exist. */
+                 * not exist. So it is ok for the next for loop to start at 1
+                 * instead of 0 */
                 memcpy(bit_total, &even_tables[even_index[0].num][0][0], pol.N/8);
 
                 /* Loop through the remaining even bit arrays and AND them with
