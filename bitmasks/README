@@ -174,3 +174,7 @@ is done it will email someone@example.com with the total runtime and a timestamp
 of when the benchmark started. If anything goes wrong during testing the email
 will still be sent, and the motd will still be set to say that tests are no
 longer running.
+
+bigtest can also get its parameters from a .yaml file which is a convenient
+plaintext format. An example file "deep_packet.yaml" shows how this works. The
+config file can be specified with the "--config" option to bigtest.py. 
