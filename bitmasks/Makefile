@@ -1,43 +1,31 @@
 CFLAGS = -std=gnu99 -pipe -combine
-DEBUG_CFLAGS= -ggdb3 -Wall -Wextra -DDEBUG #debug
-PROFILE_CFLAGS = -O3 -march=core2 -ggdb3
-RELEASE_CFLAGS= -O3 -march=core2
-LIBS= -lm -lpthread -ltcmalloc
-PROF_LIBS = -lprofiler
-NAME=tblcompile
-CC=gcc
+DEBUG_CFLAGS = -ggdb3 -Wall -Wextra -DDEBUG
+RELEASE_CFLAGS = -O3
+FLLIBS = -lm -lpthread 
+NAME = grouper
+CC = gcc
 
-all: release profile debug makerules TAGS
+all: release debug pol_gen
 
-profile: tblcompile.profile
-tblcompile.profile: tblcompile.c tblcompile.h xtrapbits.h printing.c printing.h
-	@echo Making profile...
-	$(CC) $(CFLAGS) $(PROFILE_CFLAGS) $(LIBS) $(PROF_LIBS) -o tblcompile.profile tblcompile.c printing.c
+debug: $(NAME).debug
+$(NAME).debug: grouper.c grouper.h xtrapbits.h printing.c printing.h
+	@echo Making debug version...
+	$(CC) $(FLLIBS) $(CFLAGS) $(DEBUG_CFLAGS) -o grouper.debug $(NAME).c printing.c
 
-debug: tblcompile.debug
-tblcompile.debug: tblcompile.c tblcompile.h xtrapbits.h printing.c printing.h
-	@echo Making debug...
-	$(CC) $(CFLAGS) $(DEBUG_CFLAGS) $(LIBS) -o tblcompile.debug tblcompile.c printing.c
+release: $(NAME)
+$(NAME): $(NAME).c $(NAME).h xtrapbits.h printing.c printing.h
+	@echo Making release version...
+	$(CC) $(FLLIBS) $(CFLAGS) $(RELEASE_CFLAGS) -o $(NAME) $(NAME).c printing.c
 
-release: tblcompile
-tblcompile: tblcompile.c tblcompile.h xtrapbits.h printing.c printing.h
-	@echo Making release...
-	$(CC) $(CFLAGS) $(RELEASE_CFLAGS) $(LIBS) -o tblcompile tblcompile.c printing.c
-
-makerules: makerules.c
-	$(CC) $(CFLAGS) $(RELEASE_CFLAGS) makerules.c -o makerules
-
-TAGS: tblcompile.c tblcompile.h xtrapbits.h printing.c printing.h
-	@-etags.emacs $?
+pol_gen: pol_gen.c
+	@echo Making policy generator...
+	$(CC) $(CFLAGS) $(RELEASE_CFLAGS) $@.c -o $@
 
 #utility targets
 clean:
-	@-rm *~ *.o $(NAME) 2> /dev/null
+	@-rm *~ $(NAME) $(NAME).debug pol_gen 2> /dev/null
 
-bench:
-	python bigtest.py
-
-#hack to get flymake mode to work with emacs 23
-.FLYMAKE-HACK: check-syntax
+#This allows flymake mode to work with emacs 23
+.PHONY: check-syntax
 check-syntax:
 	$(CC) $(CFLAGS) -fsyntax-only $(CHK_SOURCES)
