@@ -1,4 +1,4 @@
-#include "tblcompile.h"
+#include "grouper.h"
 
 int main(int argc, char* argv[])
 {
