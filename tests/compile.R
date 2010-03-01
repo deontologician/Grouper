@@ -141,8 +141,10 @@ add.real.pps <- function (x) {
 real.pps.vs.tables <- function(pattern
                                ,bits
                                ,bps.line = 3
+                               ,pps.line = 3
                                ,mar = c(3,4,5,4)
                                ,pch = 1
+                               ,fudge = 0
                                ,dir="./pdfs"){
   if(bits == 12000){
     total <- loadin.12K(pattern)
@@ -166,18 +168,19 @@ real.pps.vs.tables <- function(pattern
     par(mar=mar, cex=cexsize, bty="o")
     options(scipen=10)
     plot(x = rsp[[i]]$number.of.tables, y = rsp[[i]]$real.pps,
-         xlab = "", ylab = pps.label, xaxt="n",
+         xlab = "", ylab = "", xaxt="n",
          yaxt="n", tck=0, log="", pch = pch)
-    tab.ticks <- pretty(rsp[[i]]$number.of.tables, 50)
+    tab.ticks <- pretty(rsp[[i]]$number.of.tables, 11)
     pps.ticks <- pretty(rsp[[i]]$real.pps, 10)
     axis(1, tab.ticks, labels = sci.suffix(tab.ticks))
     mtext(1, text = tab.label, line = 2, cex=cexsize)
     axis(2, pps.ticks, labels = sci.suffix(pps.ticks), las = 1)
+    mtext(2, text = pps.label, line = pps.line, cex = cexsize)
     axis(4, at = pps.ticks, labels = pps.ticks * 0.012, las=1)
     mtext(4, text = mbps.label, line=bps.line, cex=cexsize)
-    mem.ticks <- pretty(tab.ticks, 20)
+    mem.ticks <- tab.ticks + fudge
     mem.labels <- byte.suffix(tables.to.bytes(bits, numrules, mem.ticks))
-    axis(3, at = mem.ticks, labels = mem.labels)
+    axis(3, at = mem.ticks, labels = mem.labels, cex.axis = 0.9)
     mtext(3, text = mem.label, line = 2, cex=cexsize)
     dev.off()
   }
@@ -187,6 +190,7 @@ real.pps.vs.tables <- function(pattern
 real.pps.vs.tables.104 <- function(){
   real.pps.vs.tables(pattern = "alltest104bits_[1-3].csv"
                      ,bits = 104
+                     ,pps.line = 3.2
                      ,pch = 3
                      )
 }
@@ -194,6 +198,7 @@ real.pps.vs.tables.320 <- function(){
   real.pps.vs.tables(pattern = "alltest320bits_[1-3].csv"
                      ,bits = 320
                      ,pch = 4
+                     ,fudge = 5
                      )
 }
 real.pps.vs.tables.12K <- function(){
@@ -208,7 +213,7 @@ real.pps.vs.tables.12K <- function(){
 real.pps.vs.tables.all <- function(){
   real.pps.vs.tables.104()
   real.pps.vs.tables.320()
-  real.pps.vs.tables.12K()
+  #real.pps.vs.tables.12K()
 }
 
 classifier.throughputs <- function(dir = "./pdfs"){
