@@ -103,21 +103,21 @@ bil <- function(x){
 }
 # formats with 1 significant digit
 digit.1 <- function(x){
-  return(formatC(x, format ="f", digit=1))
+  return(formatC(x, format ="f", digit=1, drop0trailing=TRUE))
 }
 # adds K,M, or B suffix as needed (useful in axis labels)
 sci.suffix <- function(xs){
   suffize <- function(x){
     if(x %/% bil(1) != 0){
-      return(paste(x / bil(1), "G", sep=""))
+      return(paste(digit.1(x / bil(1)), "G", sep=""))
     }
     if(x %/% mil(1) != 0){
-      return(paste(x / mil(1), "M", sep=""))
+      return(paste(digit.1(x / mil(1)), "M", sep=""))
     }
     if(x %/% thou(1) != 0){
-      return(paste(x / thou(1), "K", sep=""))
+      return(paste(digit.1(x / thou(1)), "K", sep=""))
     }#if all else fails
-    return(x)
+    return(digit.1(x))
   }
   return(lapply(xs, suffize))
 }
@@ -138,6 +138,8 @@ add.real.pps <- function (x) {
   return(x)
 }
 
+# Really should pull the "list" processing aspect out of this function, and just
+# have it do one graph at a time, but currently pressed for time
 real.pps.vs.tables <- function(pattern
                                ,bits
                                ,bps.line = 3
@@ -145,6 +147,10 @@ real.pps.vs.tables <- function(pattern
                                ,mar = c(3,4,5,4)
                                ,pch = 1
                                ,fudge = 0
+                               ,tab.ticks = NULL
+                               ,tab.labels = NULL
+                               ,mem.ticks = NULL
+                               ,mem.labels = NULL
                                ,dir="./pdfs"){
   if(bits == 12000){
     total <- loadin.12K(pattern)
@@ -170,17 +176,34 @@ real.pps.vs.tables <- function(pattern
     plot(x = rsp[[i]]$number.of.tables, y = rsp[[i]]$real.pps,
          xlab = "", ylab = "", xaxt="n",
          yaxt="n", tck=0, log="", pch = pch)
-    tab.ticks <- pretty(rsp[[i]]$number.of.tables, 11)
+    if(is.null(tab.ticks)){
+      tab.ticks2 <- pretty(rsp[[i]]$number.of.tables, 11)
+    }else{
+      tab.ticks2 <- tab.ticks[[i]]
+    }
+    if(is.null(tab.labels)){
+      tab.labels2 <- sci.suffix(tab.ticks2)
+    }else{
+      tab.labels2 <- tab.labels[[i]]
+    }
+    if(is.null(mem.ticks)){
+      mem.ticks2 <- tab.ticks2 + fudge
+    }else{
+      mem.ticks2 <- mem.ticks[[i]]
+    }
+    if(is.null(mem.labels)){
+      mem.labels2 <- byte.suffix(tables.to.bytes(bits, numrules, mem.ticks2))
+    }else{
+      mem.labels2 <- mem.labels[[i]]
+    }
     pps.ticks <- pretty(rsp[[i]]$real.pps, 10)
-    axis(1, tab.ticks, labels = sci.suffix(tab.ticks))
+    axis(1, tab.ticks2, labels = tab.labels2)
     mtext(1, text = tab.label, line = 2, cex=cexsize)
     axis(2, pps.ticks, labels = sci.suffix(pps.ticks), las = 1)
     mtext(2, text = pps.label, line = pps.line, cex = cexsize)
     axis(4, at = pps.ticks, labels = pps.ticks * 0.012, las=1)
     mtext(4, text = mbps.label, line=bps.line, cex=cexsize)
-    mem.ticks <- tab.ticks + fudge
-    mem.labels <- byte.suffix(tables.to.bytes(bits, numrules, mem.ticks))
-    axis(3, at = mem.ticks, labels = mem.labels, cex.axis = 0.9)
+    axis(3, at = mem.ticks2, labels = mem.labels2, cex.axis = 0.9)
     mtext(3, text = mem.label, line = 2, cex=cexsize)
     dev.off()
   }
@@ -195,25 +218,58 @@ real.pps.vs.tables.104 <- function(){
                      )
 }
 real.pps.vs.tables.320 <- function(){
+  tab.ticks <- c(26,40,55,70,85,100,115,130,145,160)
+  tab.labels <- sci.suffix(tab.ticks)
+  mem.ticks <- c(26,45,64,83,102,121,140,160)
+  mem.labels <- byte.suffix(tables.to.bytes(320,thou(100),mem.ticks))
   real.pps.vs.tables(pattern = "alltest320bits_[1-3].csv"
                      ,bits = 320
                      ,pch = 4
                      ,fudge = 5
+                     ,tab.ticks = list(1,1,1
+                        ,tab.ticks
+                        ,1)
+                     ,tab.labels = list(1,1,1
+                        ,tab.labels
+                        ,1)
+                     ,mem.ticks = list(1,1,1
+                        ,mem.ticks
+                        ,1)
+                     ,mem.labels = list(1,1,1
+                        ,mem.labels
+                        ,1)
                      )
 }
 real.pps.vs.tables.12K <- function(){
+  tab.ticks <- c(1160,1644,2128,2612,3096,3580,4064,4584,5068,5552,6000)
+  tab.labels <- sci.suffix(tab.ticks)
+  #these have been carefully crafted...
+  mem.ticks <- c(1160,1764,2400,2972,3576,4180,4784,5388,6000)
+  mem.labels <- byte.suffix(tables.to.bytes(thou(12), thou(10), mem.ticks))
   real.pps.vs.tables(pattern = "maxtest_[1-3].csv"
                      ,bits = 12000
                      ,bps.line = 2.3
                      ,mar = c(3,4,5,3.3)
                      ,pch = 5
+                     ,tab.ticks = list(1,1
+                        ,tab.ticks
+                        ,1)
+                     ,tab.labels = list(1,1
+                        ,tab.labels
+                        ,1)
+                     ,mem.ticks = list(1,1
+                        ,mem.ticks
+                        ,1)
+                     ,mem.labels = list(1,1
+                        ,mem.labels
+                        ,1)
                      )
 }
 #really... convenient
 real.pps.vs.tables.all <- function(){
-  real.pps.vs.tables.104()
+  #real.pps.vs.tables.104()
   real.pps.vs.tables.320()
-  #real.pps.vs.tables.12K()
+  real.pps.vs.tables.12K()
 }
 
 classifier.throughputs <- function(dir = "./pdfs"){
