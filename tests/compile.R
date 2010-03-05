@@ -162,7 +162,7 @@ real.pps.vs.tables <- function(pattern
   pps.label <- "Throughput (PPS)"
   mbps.label <- "Throughput (Mbps)"
   tab.label <- "Number of Tables"
-  mem.label <- "Memory Required"
+  mem.label <- "Memory Used"
   for(i in 1:length(rsp)){
     numrules <- rsp[[i]]$number.of.rules[1]
     filename <- paste("Tables_vs_PPS_",dot(bits),"bits_",
