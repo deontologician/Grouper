@@ -4,6 +4,7 @@ tblcompile.debug
 tblcompile.profile
 grouper
 grouper.debug
+pol_gen
 *.pdf
 *.yy.c
 *.tab.h
