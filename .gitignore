@@ -2,6 +2,8 @@
 tblcompile
 tblcompile.debug
 tblcompile.profile
+grouper
+grouper.debug
 *.pdf
 *.yy.c
 *.tab.h
