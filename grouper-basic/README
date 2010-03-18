@@ -1,0 +1,180 @@
+Copyright (c) 2009-2010 University of South Florida
+Created by Josh Kuhn, Jay Ligatti, Chris Gage
+All rights reserved.
+
+This file is part of Grouper.
+
+    Grouper is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Grouper is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Grouper.  If not, see <http://www.gnu.org/licenses/>.
+
+
+Compiling 
+---------- 
+
+Grouper can be compiled quickly and easily by simply typing "make grouper" at
+the command line. This produces an executable called "grouper". There is also a
+debug configuration of grouper that outputs extra information to stderr that can
+be compiled using "make debug". It produces an executable called
+"grouper.debug".  Grouper was written to be run on 64 bit machines, and although
+it should be compilable for 32 bits, it has not been tested and isn't
+recommended.
+
+In addition, there is a small utility program called "pol_gen", ("make pol_gen")
+that can quickly generate random policy files with desired specifications.
+
+
+Using Grouper
+-------------
+Grouper is invoked from the command line in the following way:
+
+./grouper MAX_MEMORY POLICY_FILE [INPUT_FILE] [OUTPUT_FILE]
+
+The first argument (MAX_MEMORY) is the maximum amount of memory to use when
+building lookup tables for classification. If the amount of memory specified is
+not at least the minimum required for the given policy file (POLICY_FILE),
+grouper will exit with an error message specifying the minimum memory for that
+policy.
+
+The third argument (INPUT_FILE) specifies an input source of data to be
+classified (either a file, file-like device such as /dev/urandom, or a named
+pipe). The argument is optional, and if not given input is taken from stdin. The
+fourth argument (OUTPUT_FILE) specifies where to send the classification
+data. This argument is also optional and defaults to stdout. The output format
+is a plain text integer for which rule matched and a newline for each incoming
+packet. The rules are indexed from 1, corresponding to the first rule given in
+POLICY_FILE. If no rule matches, 0 is output. The format of the policy file is
+described below in the section "Using pol_gen".
+
+Using pol_gen
+-------------
+
+pol_gen is invoked from the command line in the following way:
+
+./pol_gen BITS RULES FILENAME
+
+The first argument (BITS) specifies the number of relevent bits the policy is
+defined over. These bits need not be contiguous coming from the network, but
+must be contiguous when fed to grouper. BITS should be a multiple of 8, or else
+the program inputting data to grouper should be configured to pad zero bits up
+to a multiple of 8. This is because while grouper can build tables that classify
+a non-multiple-of-8 sized policy, it can only read in data a byte at a time. The
+generated policy file will have BITS on the first line of the file in plain
+text.
+
+The second argument (RULES) is the number of rules to generate in the
+policy. The rules are specified in bitmask form, with a '1' and '0' specifying a
+determined bit and '?' specifying a don't-care bit. Each rule is on its own line
+in the policy file, and each can be up to BITS characters in length. If less
+than BITS are specified in the rule, the rest of the rule is assumed to be
+don't-cares.
+
+Finally, FILENAME is the name of the file to write the policy to. It will not
+append to an existing policy file, but instead overwrite it.
+
+
+Using bigtest.py
+----------------
+
+Bigtest.py is a large benchmarking script written in python. It requires a
+version of python >= 2.6. If you type "./bigtest.py --help" at the command line,
+it will output the following help on its options:
+
+Usage: ./bigtest.py [options]
+
+Options:
+  -h, --help            show this help message and exit
+  -o OUTFILE, --output=OUTFILE
+                        File to write benchmark results to
+  -p PROGRAMNAME, --program=PROGRAMNAME
+                        Name of program to benchmark
+  -a, --all-tests       Whether to do every table step or not
+  -r ROUNDS, --repeat=ROUNDS
+                        Number of times to repeat a test
+  -b BITS, --bits=BITS  Number of relevent bits to test
+  -d DATA_SIZE, --data-size=DATA_SIZE
+                        How many Kilo-packets to process per test
+  -e EMAIL, --email=EMAIL
+                        The email address to notify when testing is done.
+  -c CONFIG, --config=CONFIG
+                        YAML configuration file, needed if -a option is not
+                        specified
+  -m MAX_STEPS, --max-mem-steps=MAX_STEPS
+                        Maximum number of memory increments to do
+  -l RULE_STEPS, --rule-steps=RULE_STEPS
+                        A string denoting a list of rule values
+  -M MASSIVE, --massive_test=MASSIVE
+                        Number of levels in a massive test. Supplying this
+                        option obviates supplying -a
+  -T, --testrun         Do a dry run of the test script, don't actually run
+                        the benchmark
+
+bigtest.py
+Usage: bigtest.py [options]
+
+Options:
+  -h, --help            show this help message and exit
+  -o OUTFILE, --output=OUTFILE
+                        File to write benchmark results to
+  -p PROGRAMNAME, --program=PROGRAMNAME
+                        Name of program to benchmark
+  -a, --all-tests       Whether to do every table step or not
+  -r ROUNDS, --repeat=ROUNDS
+                        Number of times to repeat a test
+  -b BITS, --bits=BITS  Number of relevent bits to test
+  -d DATA_SIZE, --data-size=DATA_SIZE
+                        How many Kilo-packets to process per test
+  -e EMAIL, --email=EMAIL
+                        The email address to notify when testing is done.
+  -c CONFIG, --config=CONFIG
+                        YAML configuration file, needed if -a option is not
+                        specified
+  -m MAX_STEPS, --max-mem-steps=MAX_STEPS
+                        Maximum number of memory increments to do
+  -l RULE_STEPS, --rule-steps=RULE_STEPS
+                        A string denoting a list of rule values
+  -M MASSIVE, --massive_test=MASSIVE
+                        Number of levels in a massive test. Supplying this
+                        option obviates supplying -a
+  -T, --testrun         Do a dry run of the test script, don't actually run
+                        the benchmark
+
+bigtest generates random input data using /dev/urandom, and generates random
+policy files using pol_gen. It is designed to run unattended and notify
+the user when it is done and when tests are in progress. It does this by setting
+the motd (/etc/motd), broadcasting a message to all users with the program
+"wall" and (if an email address is specified with -e) emailing the user with the
+program "mail". It will fail silently if "wall" and "mail" are not available,
+and *should* fail silently if the user does not have write permission to
+/etc/motd.
+
+Example for bigtest.py:
+
+./bigtest.py --all-tests --rounds=25 --bits=104 --data-size=500 -e someone@example.com 
+     --rule-steps="[1000,10000,100000]"
+
+This will do a test of every memory increment for the policy files generated by:
+
+./pol_gen 104 1000 104bx1000rules.pol
+./pol_gen 104 10000 104bx10000rules.pol
+./pol_gen 104 100000 104bx100000rules.pol
+
+It will create a random input file of size (104/8)*500000 bytes and will repeat
+this test run 25 times. (Hint: this will take a long time to complete). When it
+is done it will email someone@example.com with the total runtime and a timestamp
+of when the benchmark started. If anything goes wrong during testing the email
+will still be sent, and the motd will still be set to say that tests are no
+longer running.
+
+bigtest can also get its parameters from a .yaml file which is a convenient
+plaintext format. An example file "deep_packet.yaml" shows how this works. The
+config file can be specified with the "--config" option to bigtest.py. 
