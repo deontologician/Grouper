@@ -19,7 +19,8 @@
 
 CFLAGS = -std=gnu99 -pipe -combine
 DEBUG_CFLAGS = -ggdb3 -Wall -Wextra -DDEBUG
-RELEASE_CFLAGS = -O3
+# -DNDEBUG compiles out assertions
+RELEASE_CFLAGS = -O3 -march=core2 -DNDEBUG
 FLLIBS = -lm -lpthread 
 NAME = grouper
 CC = gcc
