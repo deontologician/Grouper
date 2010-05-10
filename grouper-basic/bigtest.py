@@ -134,7 +134,7 @@ def make_rule_file(bits, rules):
     """Create a random rule file with the number of bits and rules specified"""
     rule_filename = '%dbx%drules.pol' % (bits,rules)
     print "** Writing rule file %s ..." % rule_filename
-    check_call(['./makerules', str(bits), str(rules), str(rule_filename)])
+    check_call(['./pol_gen', str(bits), str(rules), str(rule_filename)])
     return rule_filename
 
 def build_test_input(bits = 104, inputsize = 100, data_filename="%dKpackets.bin"):
