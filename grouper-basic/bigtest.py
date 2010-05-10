@@ -56,7 +56,7 @@ def mem_levels(bitlength = 104, rules = 10000, max_space = GB(3.5)):
     
     max_tables = ceil_div(bitlength,2)
     
-    for t in xrange(max_tables,2,-1):
+    for t in xrange(max_tables,1,-1):
         bdivt, bmodt = divmod(bitlength, t)
         total_bytes = ceil_div(rules, 8) * ((t-bmodt)*(2**bdivt) + bmodt*(2**(bdivt+1)))
         if total_bytes <= max_space:          
