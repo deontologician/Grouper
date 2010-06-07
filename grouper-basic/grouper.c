@@ -460,7 +460,7 @@ void * fill_even_table(void * args)
                 ((thread_args*)args)->tables;
 
         /* Precalculate even array Byte width */
-        uint64_t e_array_Bwidth = ceil_div(dims->even_d, 8);
+        uint64_t e_array_Bwidth = ceil_div(dims->even_s, 8);
 
         Trace("Generating even table %"PRIu64"\n",d);
         /* This next loop iterates to pol.n instead of dims.bitwidth
