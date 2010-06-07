@@ -180,7 +180,7 @@ def min_tables(m, n, b):
     return high, table_mem(high,n,b)
         
 def multi_d_test(mem_steps, rule_steps, bit_steps, 
-                 programname = './tblcompile',
+                 programname = './grouper',
                  data_size = 100,
                  test_filename = 'test_file.csv',
                  max_steps = None,
@@ -349,7 +349,7 @@ def main():
         parser.add_option('-o','--output',dest='outfile',
                           help = 'File to write benchmark results to',)
         parser.add_option('-p','--program',dest='programname', 
-                          default = './tblcompile',
+                          default = './grouper',
                           help = 'Name of program to benchmark')
         parser.add_option('-a', '--all-tests', dest='all_tests',
                           action = 'store_true', default = False,
