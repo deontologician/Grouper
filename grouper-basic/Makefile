@@ -17,9 +17,9 @@
 #    You should have received a copy of the GNU General Public License
 #    along with Grouper.  If not, see <http://www.gnu.org/licenses/>.
 
-CFLAGS = -std=gnu99 -pipe -combine
+CFLAGS = -std=gnu99 -pipe -flto=2
 DEBUG_CFLAGS = -ggdb3 -Wall -Wextra -DDEBUG
-RELEASE_CFLAGS = -O3
+RELEASE_CFLAGS = -Ofast
 FLLIBS = -lm -lpthread 
 NAME = grouper
 CC = gcc

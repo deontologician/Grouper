@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2
 
 # Copyright (c) 2009-2010 University of South Florida
 # Created by Josh Kuhn, Jay Ligatti, Chris Gage
